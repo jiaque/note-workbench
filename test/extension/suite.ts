@@ -10,7 +10,7 @@ export async function run() {
   const incoming = new vscode.EventEmitter<any>(), state = new vscode.EventEmitter<any>(), disposed = new vscode.EventEmitter<void>();
   const messages: any[] = [];
   const fakePanel: any = { webview: { options: {}, html: '', cspSource: 'https://test.invalid', asWebviewUri: (uri: vscode.Uri) => uri, onDidReceiveMessage: incoming.event, postMessage: async (m: any) => { messages.push(m); return true; } }, onDidChangeViewState: state.event, onDidDispose: disposed.event, dispose: () => disposed.fire(), viewColumn: vscode.ViewColumn.One };
-  const extension = vscode.extensions.getExtension('local-development.note-workbench')!;
+  const extension = vscode.extensions.getExtension('c6d93d13-5278-6f96-ae98-e92c3ffdc5af.note-workbench')!;
   assert.ok(extension, 'Extension must be independently installed in development host');
   await extension.activate();
   const provider = new NotebookProvider({ extensionUri: extension.extensionUri } as any);

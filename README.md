@@ -4,7 +4,7 @@
 
 本项目为独立开发的 VS Code 扩展，非 Obsidian 官方产品，未获其官方背书；运行时无需安装 Obsidian 或 Obsidian Visualizer。Obsidian 名称及相关商标归其各自权利人所有。
 
-使用 TypeScript 开发，当前为 **0.5.0 开发预览，不是需求文档中的完整首版**。
+使用 TypeScript 开发，当前为 **0.5.1 开发预览，不是需求文档中的完整首版**。
 
 ## 本地运行
 
@@ -48,10 +48,10 @@ PDF 默认白底 A4、展开折叠块、隐藏编辑控件，导出点击时已�
 
 ```powershell
 npm run package
-# 输出 artifacts/note-workbench-0.5.0.vsix
+# 输出 artifacts/note-workbench-0.5.1.vsix
 ```
 
-在 VS Code 扩展面板的“…”菜单中选择“从 VSIX 安装”。打包使用临时 publisher `local-development`，未注册商店身份。不要以该身份公开发布；正式命名前需确定迁移策略。
+在 VS Code 扩展面板的“…”菜单中选择“从 VSIX 安装”。发布配置使用发布者 ID `c6d93d13-5278-6f96-ae98-e92c3ffdc5af`（发布者显示名称：jiaque），扩展标识为 `c6d93d13-5278-6f96-ae98-e92c3ffdc5af.note-workbench`。此前 `local-development.note-workbench` 为独立的本地开发身份，安装此包不会自动将其替换；切换时请禁用或卸载旧身份版本，避免重复菜单和编辑器入口。
 
 ```powershell
 npm run test:extension
@@ -61,7 +61,7 @@ npm run test:extension
 
 测试默认总时限 180 秒；慢速网络可设置 `NOTE_WORKBENCH_TEST_TIMEOUT_MS`。本轮宿主测试受本机更新锁和测试版下载中断影响，尚未完成；详细验证状态见 `docs/status.md`。
 
-Git 已按用户授权在本目录初始化，作者沿用指定现有仓库的姓名和邮箱，仅写入本仓库配置。没有远端地址，不自动推送；GitHub 上传由用户管理，Marketplace 发布延期。
+源码仓库：[jiaque/note-workbench](https://github.com/jiaque/note-workbench)。构建命令只生成 VSIX，不自动推送 Git 或发布 Marketplace；商店上线状态以发布者管理页面为准。
 
 ## 文档与许可
 

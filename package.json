@@ -1,9 +1,18 @@
 {
   "name": "note-workbench",
-  "displayName": "Note Workbench (Development)",
-  "description": "An independent Markdown and HTML notebook editor for VS Code. Local development preview.",
-  "version": "0.5.0",
-  "publisher": "local-development",
+  "displayName": "Note Workbench — Obsidian-style Editor",
+  "description": "Obsidian-style Markdown editing in VS Code with live preview, note graphs, editable tables, Markdown/HTML rendering and PDF export.",
+  "version": "0.5.1",
+  "publisher": "c6d93d13-5278-6f96-ae98-e92c3ffdc5af",
+  "author": "jiaque",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jiaque/note-workbench.git"
+  },
+  "homepage": "https://github.com/jiaque/note-workbench#readme",
+  "bugs": {
+    "url": "https://github.com/jiaque/note-workbench/issues"
+  },
   "private": true,
   "license": "Apache-2.0",
   "engines": {
@@ -11,12 +20,17 @@
     "node": ">=22"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Visualization"
   ],
   "keywords": [
     "markdown",
     "notes",
-    "table"
+    "table",
+    "obsidian",
+    "live preview",
+    "graph",
+    "pdf"
   ],
   "main": "./dist/extension.cjs",
   "activationEvents": [],
@@ -140,7 +154,7 @@
     "test": "tsx --test test/*.test.ts",
     "test:extension": "node scripts/test-extension.mjs",
     "preview": "node scripts/preview.mjs",
-    "package": "npm run build && node scripts/licenses.mjs && vsce package --allow-missing-repository --no-rewrite-relative-links --out artifacts/",
+    "package": "npm run build && node scripts/licenses.mjs && vsce package --out artifacts/",
     "verify:package": "vsce ls --tree"
   },
   "dependencies": {

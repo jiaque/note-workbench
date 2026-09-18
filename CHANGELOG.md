@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1 — 2026-09-18
+
+- Set the owner-provided publisher identity and the Note Workbench — Obsidian-style Editor display name.
+- Add repository, issue tracker, homepage and discovery keywords; enable Marketplace README link rewriting.
+- Retain the existing 0.5.0 features and document migration from the local development extension identity.
+
 ## 0.5.0 — 2026-09-18
 
 - Add PDF export from the note menu and command palette, including synchronized unsaved edits.
