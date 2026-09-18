@@ -8,7 +8,26 @@
 
 使用 TypeScript 开发，当前为 **0.5.3 开发预览，不是需求文档中的完整首版**。
 
-## 本地运行
+## 从 VS Code 扩展商店安装
+
+需要 VS Code **1.100.0 或更新版本**。日常使用无需安装 Node.js、npm 或 Obsidian。
+
+1. 打开 VS Code，点击左侧的 **扩展** 图标，或按 `Ctrl+Shift+X`（macOS：`Cmd+Shift+X`）。
+2. 搜索 **Note Workbench**，选择发布者为 **jiaque** 的 **Note Workbench — Obsidian-style Editor**。也可以输入 `@id:jiaque.note-workbench` 精确查找。
+3. 点击 **安装**，按 VS Code 提示完成安装。
+4. 打开你的笔记文件夹，在资源管理器中右键一个 `.md` 文件，选择 **Note Workbench: 打开笔记编辑器**，即可开始实时预览编辑。
+
+也可以打开 [Visual Studio Marketplace 扩展页面](https://marketplace.visualstudio.com/items?itemName=jiaque.note-workbench)，或在已配置 `code` 命令的终端中执行：
+
+```shell
+code --install-extension jiaque.note-workbench
+```
+
+安装后，点击左侧活动栏的 **Note Workbench** 图标可查看笔记连接图。已打开的 Markdown 文件也可以通过标签页右键菜单中的 **重新打开编辑器的方式… → Note Workbench** 切换编辑器。
+
+如果暂时搜索不到，请先使用完整扩展 ID 查询或打开上面的商店链接；仍在审核中的版本需要等待商店验证完成。安装操作说明可参考 [VS Code 官方扩展文档](https://code.visualstudio.com/docs/configure/extensions/extension-marketplace)。
+
+## 本地开发运行
 
 ```powershell
 npm ci
@@ -50,7 +69,7 @@ PDF 默认白底 A4、展开折叠块、隐藏编辑控件，导出点击时已�
 
 ```powershell
 npm run package
-# 输出 artifacts/note-workbench-0.5.2.vsix
+# 输出 artifacts/note-workbench-0.5.3.vsix
 ```
 
 在 VS Code 扩展面板的“…”菜单中选择“从 VSIX 安装”。发布配置使用发布者 ID `jiaque`（发布者显示名称：jiaque），扩展标识为 `jiaque.note-workbench`。此前 `local-development.note-workbench` 为独立的本地开发身份，安装此包不会自动将其替换；切换时请禁用或卸载旧身份版本，避免重复菜单和编辑器入口。
