@@ -1,0 +1,1 @@
+{"nodes":[{"id":"a","type":"text","x":0,"y":0,"width":200,"height":100,"text":"This text is not displayed in an embed","color":"1"},{"id":"b","type":"text","x":300,"y":80,"width":200,"height":100,"text":"Another card","color":"5"}],"edges":[{"id":"ab","fromNode":"a","fromSide":"right","toNode":"b","toSide":"left"}]}

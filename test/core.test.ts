@@ -8,6 +8,27 @@ import { validEdit } from '../src/shared/protocol';
 const md = '---\r\ntitle: original\r\n---\r\n\r\n| A | B |\r\n| :--- | ---: |\r\n| 一 | 二 |\r\n| 三 | 四 |\r\n\r\n<!-- untouched -->';
 const html = '<!-- before -->\n\n<table id="keep"><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr data-x="keep"><td>one</td><td><strong>two</strong></td></tr><tr><td>three</td><td>four</td></tr></tbody></table>\n\nTAIL';
 const first = (source: string) => renderDocument(source).tables[0];
+
+test('foldable callouts retain rich title, body, nesting and default state', () => {
+  const source = '> [!abstract]+ **Summary**\n> Body\n>\n> > [!quote]- Details\n> > Hidden';
+  const html = renderDocument(source).blocks.map(b => b.html).join('');
+  assert.match(html, /<details class="callout" data-callout="abstract"[^>]* open>/);
+  assert.match(html, /<summary class="callout-title">.*<strong>Summary<\/strong><\/summary>/);
+  assert.match(html, /<p>Body<\/p>/);
+  assert.match(html, /<details class="callout" data-callout="quote" data-callout-color="gray">/);
+  assert.doesNotMatch(html, /\[!abstract\]|\[!quote\]/);
+});
+
+test('mixed HTML preserves visual styles, SVG geometry and safe anchor ids', () => {
+  const html = renderDocument('<a id="section"></a>\n\n## <span style="background-color:#953734;color:white;padding:4px 10px;display:block;position:fixed;background-image:url(https://bad.test)">Title</span>\n\n<svg viewBox="0 0 100 40"><text x="2" y="20" font-size="14">Chart</text><path d="M0 0L10 10" stroke="#333"/></svg>').blocks.map(b => b.html).join('');
+  assert.match(html, /background-color:#953734/); assert.doesNotMatch(html, /position:fixed|bad.test/);
+  assert.match(html, /id="user-content-section"/); assert.match(html, /viewBox="0 0 100 40"/); assert.match(html, /font-size="14"/); assert.match(html, /<path/);
+});
+
+test('SVG active content and external references remain blocked', () => {
+  const html = renderDocument('<svg onload="alert(1)"><script>alert(1)</script><foreignObject><iframe src="https://bad.test"></iframe></foreignObject><use href="https://bad.test/a.svg#x"/><rect fill="url(https://bad.test)" style="fill:url(https://bad.test);color:red"/></svg>').blocks.map(b => b.html).join('');
+  assert.doesNotMatch(html, /onload|<script|foreignObject|iframe|<use|bad.test/);
+});
 test('rendering never mutates source and renders Markdown, HTML, math', () => {
   const before = md;
   assert.ok(renderDocument(md).blocks.length);

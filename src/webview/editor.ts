@@ -5,7 +5,9 @@ import { markdown } from '@codemirror/lang-markdown';
 import { editTable, type Table, type TableOperation } from '../shared/tables';
 import { applyReplacements, minimalEdit } from '../shared/edits';
 import type { Snapshot } from '../shared/protocol';
+import {findHeading} from '../shared/anchors';
 import './editor.css';
+import './document.css';
 
 declare function acquireVsCodeApi(): { postMessage(message: unknown): void; getState(): any; setState(value: unknown): void };
 const api = acquireVsCodeApi();
@@ -14,16 +16,38 @@ let editor: EditorView | undefined;
 let draft: { source: string; from: number; to: number; version: number } | undefined = api.getState()?.draft;
 let pending: string | undefined;
 let mode: 'edit' | 'read' = 'edit';
+let showProperties = false;
+let pendingNavigation: string | undefined;
 let renderEpoch = 0;
 let mermaidPromise: Promise<any> | undefined;
+let disposeMedia: (()=>void)[]=[];
 const root = document.getElementById('app')!;
-root.innerHTML = `<header class="app-header"><div class="brand"><span class="brand-mark">N</span><div><strong>Note Workbench</strong><small>本地开发预览 · 0.1</small></div></div><nav aria-label="笔记操作"></nav></header><div class="document-heading"><div><span class="eyebrow">YOUR LOCAL NOTEBOOK</span><h1 id="filename">正在打开笔记…</h1></div><span id="mode-label">编辑</span></div><div id="status" role="status" aria-live="polite"></div><main id="content"></main><footer>本地 Markdown · 内容保存在原文件中</footer>`;
+root.innerHTML = `<details class="document-menu"><summary aria-label="笔记操作" title="笔记操作">···</summary><nav aria-label="笔记操作"></nav></details><div id="status" role="status" aria-live="polite"></div><main id="content"></main>`;
 const content = document.getElementById('content')!;
 const status = document.getElementById('status')!;
 const nav = root.querySelector('nav')!;
 const button = (label: string, onClick: () => void, className = '') => { const node = document.createElement('button'); node.type = 'button'; node.textContent = label; node.className = className; node.addEventListener('click', onClick); return node; };
 const info = (message: string, error = false) => { status.textContent = message; status.classList.toggle('error', error); };
 const remember = () => api.setState({ draft });
+function navigate(fragment: string) {
+  const target = document.getElementById('user-content-' + fragment) ?? document.getElementById(fragment)
+    ?? findHeading([...content.querySelectorAll<HTMLElement>('h1[data-heading],h2[data-heading],h3[data-heading],h4[data-heading],h5[data-heading],h6[data-heading]')],fragment,node=>node.dataset.heading??'',node=>Number(node.tagName[1]));
+  for (let parent = target?.parentElement; parent; parent = parent.parentElement) if (parent instanceof HTMLDetailsElement) parent.open = true;
+  target?.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+document.addEventListener('pointerdown', event => {
+  for (const menu of document.querySelectorAll<HTMLDetailsElement>('.table-menu[open],.document-menu[open]')) if (!menu.contains(event.target as Node)) menu.open = false;
+});
+content.addEventListener('click', event => {
+  const link = (event.target as Element).closest('a');
+  if (!link) return;
+  event.preventDefault();
+  const href = link.getAttribute('href') ?? '';
+  if (href.startsWith('#')) {
+    let id: string; try { id = decodeURIComponent(href.slice(1)); } catch { return; }
+    navigate(id);
+  } else api.postMessage({ type: 'openLink', href });
+});
 
 function commit(replacements: ReturnType<typeof minimalEdit>) {
   if (!snapshot || pending || snapshot.readonly) return;
@@ -57,11 +81,15 @@ function draftElement(): HTMLElement {
   queueMicrotask(() => editor?.focus()); return box;
 }
 
-function tableElement(table: Table): HTMLElement {
+function tableElement(table: Table, html: string): HTMLElement {
   const tableVersion = snapshot!.version, tableSource = snapshot!.source;
   const wrapper = document.createElement('section'); wrapper.className = 'table-card';
   wrapper.setAttribute('aria-label', `${table.format === 'markdown' ? 'Markdown' : 'HTML'} 表格`);
-  const tools = document.createElement('div'); tools.className = 'table-tools';
+  const menu = document.createElement('details'); menu.className = 'table-menu';
+  const menuToggle = document.createElement('summary'); menuToggle.textContent = '···'; menuToggle.setAttribute('aria-label', '表格操作'); menu.append(menuToggle);
+  const tools = document.createElement('div'); tools.className = 'table-tools'; menu.append(tools);
+  const renderedTable = document.createElement('template'); renderedTable.innerHTML = html;
+  const renderedRows = Array.from(renderedTable.content.querySelector('table')?.rows ?? []);
   const caption = document.createElement('span'); caption.textContent = table.format.toUpperCase(); tools.append(caption);
   let rowIndex = table.format === 'markdown' && table.rows.length > 1 ? 1 : 0, columnIndex = 0;
   const targetLabel = document.createElement('span');
@@ -89,7 +117,7 @@ function tableElement(table: Table): HTMLElement {
     tools.append(button('删除整表', () => { if (confirm('删除整个表格？可以通过撤销恢复。')) commit([{ from: table.from, to: table.to, expectedText: snapshot!.source.slice(table.from, table.to), insert: '' }]); }, 'danger'));
   }
   tools.append(button('表格源码', () => openDraft(table.from, table.to)));
-  wrapper.append(tools);
+  wrapper.append(menu);
   if (table.reason) { const note = document.createElement('p'); note.textContent = table.reason; wrapper.append(note); }
   const scroll = document.createElement('div'); scroll.className = 'table-scroll';
   const grid = document.createElement('table'); grid.className = 'editable-table';
@@ -145,9 +173,13 @@ function tableElement(table: Table): HTMLElement {
     }
     row.cells.forEach((cell, c) => {
       const td = document.createElement(cell.tag === 'th' || (table.format === 'markdown' && r === 0) ? 'th' : 'td');
-      td.textContent = cell.raw.trim(); td.tabIndex = canEdit ? 0 : -1;
+      const renderedCell = renderedRows[r]?.cells[c];
+      if (renderedCell) { td.innerHTML = renderedCell.innerHTML; for(const attribute of renderedCell.attributes)td.setAttribute(attribute.name,attribute.value); }
+      else td.textContent = cell.raw.trim();
+      td.tabIndex = canEdit ? 0 : -1;
       const select = () => { rowIndex = r; columnIndex = c; refreshTarget(); grid.querySelectorAll('.selected-cell').forEach(node => node.classList.remove('selected-cell')); td.classList.add('selected-cell'); };
       td.addEventListener('focus', select); td.addEventListener('click', select);
+      td.addEventListener('contextmenu', event => { if (!canEdit) return; event.preventDefault(); select(); menu.open = true; tools.querySelector('button')?.focus(); });
       if (canEdit) {
         const edit = () => {
           if (pending || draft || td.querySelector('textarea')) return;
@@ -174,7 +206,12 @@ function tableElement(table: Table): HTMLElement {
     grid.append(tr);
   });
   scroll.append(grid); wrapper.append(scroll);
-  const hint = document.createElement('small'); hint.className = 'table-hint'; hint.textContent = canEdit ? '双击单元格编辑片段 · 拖动 ↕ / ↔ 调整顺序 · 聚焦后可用工具栏操作' : '阅读模式'; wrapper.append(hint);
+  if (canEdit) {
+    const addRow = button('+', () => execute({ kind: 'insertRow', at: table.rows.length, row: table.rows.length - 1 }), 'edge-add add-row'); addRow.setAttribute('aria-label', '末尾添加行'); addRow.title = '添加行';
+    const addColumn = button('+', () => execute({ kind: 'insertColumn', at: table.rows[0].cells.length }), 'edge-add add-column'); addColumn.setAttribute('aria-label', '末尾添加列'); addColumn.title = '添加列';
+    wrapper.append(addRow, addColumn);
+  }
+  wrapper.addEventListener('keydown', event => { if (event.key === 'Escape') { menu.open = false; menuToggle.focus(); } });
   return wrapper;
 }
 
@@ -182,33 +219,55 @@ function render() {
   if (!snapshot) return;
   editor?.destroy(); editor = undefined;
   const epoch = ++renderEpoch;
-  document.getElementById('filename')!.textContent = snapshot.name;
-  document.getElementById('mode-label')!.textContent = mode === 'read' ? '阅读模式' : '编辑模式';
+  disposeMedia.forEach(dispose=>dispose());disposeMedia=[];
+  document.title = snapshot.name;
+  content.className=(snapshot.classes??[]).join(' ');
   nav.replaceChildren(button(mode === 'edit' ? '阅读' : '编辑', () => { if (draft) { info('请先应用或取消当前草稿。'); return; } mode = mode === 'edit' ? 'read' : 'edit'; render(); }), button('全文源码', () => openDraft(0, snapshot!.source.length)), button('VS Code 源码', () => api.postMessage({ type: 'source' })), button('保存', () => { if (draft) applyDraft(true); else api.postMessage({ type: 'save' }); }, 'primary'));
+  nav.append(button(showProperties?'隐藏属性':'显示属性',()=>{showProperties=!showProperties;render();}));
   content.replaceChildren();
   if (draft) { content.append(draftElement()); return; }
   if (!snapshot.blocks.length) content.append(button('开始写笔记', () => openDraft(0, 0), 'empty-note'));
   for (const block of snapshot.blocks) {
+    if ((block.kind === 'yaml' && !showProperties) || block.kind === 'definition' || block.kind === 'footnoteDefinition') continue;
     const tables = snapshot.tables.filter(table => table.from >= block.from && table.to <= block.to);
     // A lone HTML table can use the structural editor. Mixed HTML blocks retain full rendering.
     const isolated = tables.length === 1 && block.source.trim() === snapshot.source.slice(tables[0].from, tables[0].to).trim();
-    if (isolated && !tables[0].reason && mode === 'edit') { content.append(tableElement(tables[0])); continue; }
+    if (isolated && !tables[0].reason && mode === 'edit') { content.append(tableElement(tables[0], block.html)); continue; }
     const section = document.createElement('section'); section.className = 'note-block';
     const body = document.createElement('div'); body.className = 'rendered'; body.innerHTML = block.html;
+    if (!body.textContent?.trim() && body.querySelector('a[id]') && !body.querySelector('img,svg')) section.classList.add('anchor-block');
     if (block.kind === 'definition' || block.kind === 'footnoteDefinition') { body.textContent = mode === 'edit' ? block.source : ''; body.classList.add('definition'); }
     section.append(body);
-    if (mode === 'edit' && !snapshot.readonly) section.append(button('编辑', () => openDraft(block.from, block.to), 'block-edit'));
-    body.querySelectorAll('a').forEach(link => link.addEventListener('click', event => { event.preventDefault(); api.postMessage({ type: 'openLink', href: link.getAttribute('href') ?? '' }); }));
+    if (mode === 'edit' && !snapshot.readonly && block.kind !== 'footnotes') section.append(button('编辑', () => openDraft(block.from, block.to), 'block-edit'));
+    for (const task of body.querySelectorAll<HTMLInputElement>('li[data-task-offset] > input[type="checkbox"],li[data-task-offset] > p > input[type="checkbox"]')) {
+      const item=task.closest<HTMLElement>('[data-task-offset]')!, offset=Number(item.dataset.taskOffset), version=snapshot.version;
+      task.disabled=!!snapshot.readonly;
+      task.setAttribute('aria-label',item.textContent?.trim()||'任务');
+      task.addEventListener('change',()=>{
+        if (!snapshot || pending || draft || snapshot.version!==version) { task.checked=!task.checked; info('请先应用草稿或等待当前修改完成。'); return; }
+        commit([{from:offset,to:offset+1,expectedText:snapshot.source.slice(offset,offset+1),insert:task.checked?'x':' '}]);
+      });
+    }
     for (const code of body.querySelectorAll<HTMLElement>('code.language-mermaid')) {
       const source = code.textContent ?? '';
       mermaidPromise ??= import('mermaid').then(module => { module.default.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true }); return module.default; });
       void mermaidPromise.then(async mermaid => {
-        try { const { svg } = await mermaid.render(`diagram-${crypto.randomUUID()}`, source); if (epoch === renderEpoch && code.isConnected) { const target = document.createElement('div'); target.className = 'mermaid-diagram'; target.innerHTML = svg; code.parentElement!.replaceWith(target); } }
+        try { const { svg } = await mermaid.render(`diagram-${crypto.randomUUID()}`, source); if (epoch === renderEpoch && code.isConnected) {
+          const target = document.createElement('div'); target.className = 'mermaid-diagram'; target.innerHTML = svg;
+          for(const node of target.querySelectorAll<SVGElement>('.node.internal-link')){
+            const label=node.querySelector('.nodeLabel,.label')?.textContent?.trim();if(!label)continue;
+            node.setAttribute('role','link');node.setAttribute('tabindex','0');node.setAttribute('aria-label',`打开笔记 ${label}`);node.style.cursor='pointer';
+            const open=()=>api.postMessage({type:'openLink',href:'nw-note:'+encodeURIComponent(label)});node.addEventListener('click',open);node.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();open();}});
+          }
+          code.parentElement!.replaceWith(target);
+        } }
         catch { if (code.isConnected) { const error = document.createElement('p'); error.className = 'render-error'; error.textContent = 'Mermaid 语法有误，请编辑此块修复。'; code.parentElement?.append(error); } }
       });
     }
     content.append(section);
+    for (const pdf of body.querySelectorAll<HTMLElement>('[data-pdf-src]')) void import('./pdf').then(module=>{if(epoch===renderEpoch&&pdf.isConnected)disposeMedia.push(module.mountPdf(pdf));}).catch(error=>{pdf.textContent='PDF 模块加载失败：'+String(error);});
   }
+  if(pendingNavigation){navigate(pendingNavigation);pendingNavigation=undefined;}
 }
 
 window.addEventListener('message', event => {
@@ -217,7 +276,8 @@ window.addEventListener('message', event => {
     snapshot = message;
     if (message.operationId && message.operationId === pending) { pending = undefined; draft = undefined; remember(); info('修改已应用 · Ctrl+S 保存'); render(); }
     else if (!pending) { if (draft) { info('草稿已保留；应用前将检查文档版本。'); if (!editor) render(); } else render(); }
-  } else if (message?.type === 'conflict') { pending = undefined; info('文档版本冲突，草稿已保留，请基于最新版本重试。', true); }
+  } else if (message?.type === 'navigate' && typeof message.fragment === 'string') { if(snapshot)navigate(message.fragment);else pendingNavigation=message.fragment; }
+  else if (message?.type === 'conflict') { pending = undefined; info('文档版本冲突，草稿已保留，请基于最新版本重试。', true); }
   else if (message?.type === 'error') { pending = undefined; info(message.message, true); }
 });
 document.addEventListener('keydown', event => {

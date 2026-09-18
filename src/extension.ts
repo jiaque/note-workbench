@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import { applyReplacements } from './shared/edits';
 import { renderDocument } from './shared/render';
 import { validEdit, type Snapshot } from './shared/protocol';
+import { hydrateResources, type Resource } from './shared/embeds';
 
 export const viewType = 'noteWorkbench.editor';
 
@@ -12,37 +13,46 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
   active?: { document: vscode.TextDocument; panel: vscode.WebviewPanel };
   private queues = new Map<string, Promise<void>>();
   private panels = new Set<vscode.WebviewPanel>();
+  private destinations = new Map<string, string>();
   constructor(private context: vscode.ExtensionContext) {}
 
   async resolveCustomTextEditor(document: vscode.TextDocument, panel: vscode.WebviewPanel): Promise<void> {
     this.panels.add(panel); this.active = { document, panel };
     const folder = vscode.workspace.getWorkspaceFolder(document.uri);
     panel.webview.options = { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'dist'), ...(folder ? [folder.uri] : [vscode.Uri.joinPath(document.uri, '..')])] };
-    panel.webview.html = this.html(panel.webview);
-    let disposed = false;
-    const sendSnapshot = (operationId?: string) => {
+    const styleSheets:vscode.Uri[]=[];
+    const vaultRoot=await realpath(folder?.uri.fsPath??path.dirname(document.uri.fsPath));
+    for(const relativePath of vscode.workspace.getConfiguration('noteWorkbench',document.uri).get<string[]>('styleSheets',[])){
+      try{const file=await realpath(path.resolve(vaultRoot,relativePath)),relative=path.relative(vaultRoot,file);if(relative.startsWith('..')||path.isAbsolute(relative)||path.extname(file).toLowerCase()!=='.css')continue;styleSheets.push(vscode.Uri.file(file));}catch{/* Missing custom styles do not prevent opening a note. */}
+    }
+    panel.webview.html = this.html(panel.webview,styleSheets);
+    let disposed = false, renderRequest = 0, acknowledgedOperation: string | undefined;
+    const sendSnapshot = async (operationId?: string) => {
       if (disposed) return;
-      const source = document.getText();
+      if (operationId) acknowledgedOperation = operationId;
+      const source = document.getText(), version = document.version, request = ++renderRequest;
       try {
         const rendered = renderDocument(source);
-        // Host rewrites local images; links remain routed through openLink.
-        for (const block of rendered.blocks) block.html = block.html.replace(/(<img\b[^>]*\bsrc=")([^"<>]+)(")/g, (_m, a, raw, b) => {
-          if (/^(?:https?:|data:)/i.test(raw)) return `${a}${raw}${b}`;
-          if (/^[a-z][\w+.-]*:/i.test(raw)) return `${a}${b}`;
-          try { const target = vscode.Uri.joinPath(document.uri, '..', decodeURIComponent(raw.replace(/&amp;/g, '&'))); return `${a}${panel.webview.asWebviewUri(target)}${b}`; } catch { return `${a}${b}`; }
-        });
-        const message: Snapshot = { type: 'snapshot', source, version: document.version, name: path.basename(document.fileName), readonly: vscode.workspace.fs.isWritableFileSystem(document.uri.scheme) === false, operationId, ...rendered };
+        await hydrateResources(rendered, document.uri.toString(), async (origin,target) => this.resolveResource(vscode.Uri.parse(origin),target,panel.webview));
+        if (disposed || request !== renderRequest || document.version !== version) return;
+        const message: Snapshot = { type: 'snapshot', source, version, name: path.basename(document.fileName), readonly: vscode.workspace.fs.isWritableFileSystem(document.uri.scheme) === false, operationId: acknowledgedOperation, ...rendered };
+        acknowledgedOperation = undefined;
         void panel.webview.postMessage(message);
+        const destination = this.destinations.get(document.uri.toString());
+        if (destination) { this.destinations.delete(document.uri.toString()); void panel.webview.postMessage({ type:'navigate', fragment:destination }); }
       } catch (error) { void panel.webview.postMessage({ type: 'error', message: String(error) }); }
     };
-    const changes = vscode.workspace.onDidChangeTextDocument(event => { if (event.document.uri.toString() === document.uri.toString()) sendSnapshot(); });
+    const changes = vscode.workspace.onDidChangeTextDocument(event => { if (event.document.languageId === 'markdown') void sendSnapshot(); });
+    const watcher = vscode.workspace.createFileSystemWatcher('**/*.{md,canvas}');
+    const refresh = () => { void sendSnapshot(); };
+    const watched = [watcher.onDidChange(refresh),watcher.onDidCreate(refresh),watcher.onDidDelete(refresh)];
     const state = panel.onDidChangeViewState(() => { if (panel.active) this.active = { document, panel }; });
     const messages = panel.webview.onDidReceiveMessage(message => {
       const key = document.uri.toString();
       const next = (this.queues.get(key) ?? Promise.resolve()).then(async () => {
         if (disposed || !message || typeof message.type !== 'string') return;
         switch (message.type) {
-          case 'ready': sendSnapshot(); return;
+          case 'ready': await sendSnapshot(); return;
           case 'edit': {
             if (!validEdit(message)) throw new Error('无效编辑请求。');
             if (document.version !== message.baseVersion) { await panel.webview.postMessage({ type: 'conflict', operationId: message.operationId }); sendSnapshot(); return; }
@@ -51,7 +61,7 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
             const edit = new vscode.WorkspaceEdit();
             for (const item of message.replacements) edit.replace(document.uri, new vscode.Range(document.positionAt(item.from), document.positionAt(item.to)), item.insert);
             if (!await vscode.workspace.applyEdit(edit)) throw new Error('VS Code 未接受编辑，内容尚未写入。');
-            sendSnapshot(message.operationId); return;
+            await sendSnapshot(message.operationId); return;
           }
           case 'save': await document.save(); return;
           case 'source': await vscode.commands.executeCommand('vscode.openWith', document.uri, 'default', panel.viewColumn); return;
@@ -68,27 +78,58 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
       this.queues.set(key, next);
       void next.finally(() => { if (this.queues.get(key) === next) this.queues.delete(key); });
     });
-    panel.onDidDispose(() => { disposed = true; changes.dispose(); messages.dispose(); state.dispose(); this.panels.delete(panel); if (this.active?.panel === panel) this.active = undefined; });
+    panel.onDidDispose(() => { disposed = true; changes.dispose(); watcher.dispose(); watched.forEach(item=>item.dispose()); messages.dispose(); state.dispose(); this.panels.delete(panel); if (this.active?.panel === panel) this.active = undefined; });
+  }
+
+  private async resolveResource(origin: vscode.Uri, href: string, webview?: vscode.Webview): Promise<Resource> {
+    const hash=href.indexOf('#'), targetPath=hash<0?href:href.slice(0,hash), fragment=hash<0?'':decodeURIComponent(href.slice(hash+1));
+    const folder=vscode.workspace.getWorkspaceFolder(origin);
+    const root=await realpath(folder?.uri.fsPath ?? path.dirname(origin.fsPath));
+    let target: vscode.Uri;
+    if (!targetPath) target=origin;
+    else if (targetPath.startsWith('file:///')) target=vscode.Uri.parse(targetPath);
+    else if (/^[a-z]:[\\/]/i.test(targetPath)) target=vscode.Uri.file(decodeURIComponent(targetPath));
+    else if (/^[a-z][\w+.-]*:/i.test(targetPath) || targetPath.startsWith('//')) throw new Error('不支持的笔记链接协议');
+    else target=vscode.Uri.joinPath(origin,'..',decodeURIComponent(targetPath));
+    if (!path.extname(target.fsPath)) target=target.with({path:target.path+'.md'});
+    try { await vscode.workspace.fs.stat(target); }
+    catch {
+      const name=path.basename(target.fsPath).toLowerCase();
+      const files=await vscode.workspace.findFiles(new vscode.RelativePattern(root,'**/*'),'**/{node_modules,.git,.npm-cache}/**',10000);
+      const suffix=decodeURIComponent(targetPath).replace(/\\/g,'/').replace(/^\//,'') + (path.extname(targetPath)?'':'.md');
+      const candidates=files.filter(file=>path.basename(file.fsPath).toLowerCase()===name && (!suffix.includes('/') || file.path.toLowerCase().endsWith('/'+suffix.toLowerCase())));
+      if (candidates.length!==1) throw new Error(candidates.length?'多个同名文件，请使用完整相对路径':'找不到笔记或附件：'+href);
+      target=candidates[0];
+    }
+    const resolved=await realpath(target.fsPath), relative=path.relative(root,resolved);
+    if (relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('目标文件不在当前笔记库内');
+    const extension=path.extname(target.fsPath).toLowerCase();
+    const source=extension==='.md'?(await vscode.workspace.openTextDocument(target)).getText():extension==='.canvas'?Buffer.from(await vscode.workspace.fs.readFile(target)).toString('utf8'):undefined;
+    return {id:target.with({fragment}).toString(), url:(webview?webview.asWebviewUri(target):target).with({fragment}).toString(), source, extension};
   }
 
   private async openLink(origin: vscode.Uri, href: string): Promise<void> {
+    if(href.startsWith('nw-tag:')) {await vscode.commands.executeCommand('workbench.action.findInFiles',{query:'#'+decodeURIComponent(href.slice(7)),filesToInclude:'**/*.md',isCaseSensitive:false});return;}
+    if (href.startsWith('nw-note:')) {
+      const resource=await this.resolveResource(origin,decodeURIComponent(href.slice(8))), uri=vscode.Uri.parse(resource.id), destination=uri.fragment, target=uri.with({fragment:''});
+      if (destination) this.destinations.set(target.toString(),destination);
+      await vscode.commands.executeCommand('vscode.openWith',target,resource.extension==='.md'?viewType:'default');
+      if (destination && this.active?.document.uri.toString()===target.toString()) { void this.active.panel.webview.postMessage({type:'navigate',fragment:destination}); this.destinations.delete(target.toString()); }
+      return;
+    }
+    if (href.startsWith('obsidian:')) { await vscode.env.openExternal(vscode.Uri.parse(href)); return; }
+    if (href.startsWith('mailto:')) { await vscode.env.openExternal(vscode.Uri.parse(href)); return; }
     if (/^https?:\/\//i.test(href)) { await vscode.env.openExternal(vscode.Uri.parse(href)); return; }
-    if (/^[a-z][\w+.-]*:/i.test(href) || href.startsWith('//')) return;
-    const [targetPath] = href.split('#');
-    if (!targetPath) return;
-    const target = vscode.Uri.joinPath(origin, '..', decodeURIComponent(targetPath));
-    const folder = vscode.workspace.getWorkspaceFolder(origin);
-    const root = await realpath(folder?.uri.fsPath ?? path.dirname(origin.fsPath));
-    const resolved = await realpath(target.fsPath);
-    const relative = path.relative(root, resolved);
-    if (relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('本开发版仅打开笔记库内的本地链接。');
-    await vscode.commands.executeCommand('vscode.openWith', target, target.path.endsWith('.md') ? viewType : 'default');
+    if ((/^[a-z][\w+.-]*:/i.test(href) && !href.startsWith('file:///')) || href.startsWith('//')) return;
+    if (!href || href.startsWith('#')) return;
+    await this.openLink(origin,'nw-note:'+encodeURIComponent(href));
   }
 
-  private html(webview: vscode.Webview): string {
+  private html(webview: vscode.Webview, styleSheets:vscode.Uri[]=[]): string {
     const nonce = randomBytes(16).toString('hex');
     const asset = (name: string) => webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview', name));
-    return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; script-src 'nonce-${nonce}' ${webview.cspSource};"><link rel="stylesheet" href="${asset('editor.css')}"></head><body><div id="app"></div><script type="module" nonce="${nonce}" src="${asset('editor.js')}"></script></body></html>`;
+    const styles=styleSheets.map(uri=>`<link rel="stylesheet" href="${webview.asWebviewUri(uri).toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">`).join('');
+    return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; connect-src ${webview.cspSource}; media-src ${webview.cspSource} https: data:; worker-src ${webview.cspSource} blob:; script-src 'nonce-${nonce}' ${webview.cspSource};"><link rel="stylesheet" href="${asset('editor.css')}">${styles}</head><body><div id="app"></div><script type="module" nonce="${nonce}" src="${asset('editor.js')}"></script></body></html>`;
   }
   dispose(): void { for (const panel of this.panels) panel.dispose(); }
 }
