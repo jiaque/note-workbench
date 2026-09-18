@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2 — 2026-09-18
+
+- Correct the Marketplace publisher identifier to `jiaque`, as confirmed by the upload validation response. The extension ID is `jiaque.note-workbench`.
+
 ## 0.5.1 — 2026-09-18
 
 - Set the owner-provided publisher identity and the Note Workbench — Obsidian-style Editor display name.

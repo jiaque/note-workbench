@@ -4,7 +4,7 @@
 
 本项目为独立开发的 VS Code 扩展，非 Obsidian 官方产品，未获其官方背书；运行时无需安装 Obsidian 或 Obsidian Visualizer。Obsidian 名称及相关商标归其各自权利人所有。
 
-使用 TypeScript 开发，当前为 **0.5.1 开发预览，不是需求文档中的完整首版**。
+使用 TypeScript 开发，当前为 **0.5.2 开发预览，不是需求文档中的完整首版**。
 
 ## 本地运行
 
@@ -48,10 +48,10 @@ PDF 默认白底 A4、展开折叠块、隐藏编辑控件，导出点击时已�
 
 ```powershell
 npm run package
-# 输出 artifacts/note-workbench-0.5.1.vsix
+# 输出 artifacts/note-workbench-0.5.2.vsix
 ```
 
-在 VS Code 扩展面板的“…”菜单中选择“从 VSIX 安装”。发布配置使用发布者 ID `c6d93d13-5278-6f96-ae98-e92c3ffdc5af`（发布者显示名称：jiaque），扩展标识为 `c6d93d13-5278-6f96-ae98-e92c3ffdc5af.note-workbench`。此前 `local-development.note-workbench` 为独立的本地开发身份，安装此包不会自动将其替换；切换时请禁用或卸载旧身份版本，避免重复菜单和编辑器入口。
+在 VS Code 扩展面板的“…”菜单中选择“从 VSIX 安装”。发布配置使用发布者 ID `jiaque`（发布者显示名称：jiaque），扩展标识为 `jiaque.note-workbench`。此前 `local-development.note-workbench` 为独立的本地开发身份，安装此包不会自动将其替换；切换时请禁用或卸载旧身份版本，避免重复菜单和编辑器入口。
 
 ```powershell
 npm run test:extension
