@@ -1,3 +1,5 @@
 * text=auto eol=lf
+*.pdf binary
+*.wav binary
 *.png binary
 *.vsix binary
