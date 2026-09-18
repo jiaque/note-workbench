@@ -50,6 +50,8 @@ npm run test:extension
 
 宿主测试默认下载官方 VS Code 1.100.3 至项目内的 `.vscode-test`，使用独立配置与合成笔记。可设置 `NOTE_WORKBENCH_VSCODE` 指向已有 VS Code 可执行文件，或用 `NOTE_WORKBENCH_VSCODE_VERSION` 选择其他测试版本。下载缓存、依赖、测试配置和 VSIX 均由 `.gitignore` 排除。
 
+测试默认总时限 180 秒；慢速网络可设置 `NOTE_WORKBENCH_TEST_TIMEOUT_MS`。本轮宿主测试受本机更新锁和测试版下载中断影响，尚未完成；详细验证状态见 `docs/status.md`。
+
 Git 已按用户授权在本目录初始化，作者沿用指定现有仓库的姓名和邮箱，仅写入本仓库配置。没有远端地址，不自动推送；GitHub 上传由用户管理，Marketplace 发布延期。
 
 ## 文档与许可
