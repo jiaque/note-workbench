@@ -7,6 +7,7 @@ import { applyReplacements } from './shared/edits';
 import { renderDocument } from './shared/render';
 import { validEdit, type Snapshot } from './shared/protocol';
 import { hydrateResources, type Resource } from './shared/embeds';
+import {exportPdf} from './pdf/export';
 
 export const viewType = 'noteWorkbench.editor';
 
@@ -15,6 +16,7 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
   private queues = new Map<string, Promise<void>>();
   private panels = new Set<vscode.WebviewPanel>();
   private destinations = new Map<string, string>();
+  private exporting=false;
   constructor(private context: vscode.ExtensionContext, private graph?:GraphProvider) {}
 
   async resolveCustomTextEditor(document: vscode.TextDocument, panel: vscode.WebviewPanel): Promise<void> {
@@ -80,6 +82,7 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
             await sendSnapshot(message.operationId); return;
           }
           case 'save': await document.save(); return;
+          case 'exportPdf': void this.exportDocument(document); return;
           case 'source': await vscode.commands.executeCommand('vscode.openWith', document.uri, 'default', panel.viewColumn); return;
           case 'undo': case 'redo': {
             // Commands target the visible text editor: explicitly bind before dispatch.
@@ -95,6 +98,43 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
       void next.finally(() => { if (this.queues.get(key) === next) this.queues.delete(key); });
     });
     panel.onDidDispose(() => { disposed = true; config.dispose(); changes.dispose(); watcher.dispose(); watched.forEach(item=>item.dispose()); messages.dispose(); state.dispose(); this.panels.delete(panel); if (this.active?.panel === panel) this.active = undefined; });
+  }
+
+  async exportCurrent():Promise<void>{
+    if(this.active?.panel.active){await this.active.panel.webview.postMessage({type:'requestExportPdf'});return;}
+    const document=vscode.window.activeTextEditor?.document;
+    if(document?.languageId==='markdown')await this.exportDocument(document);
+    else void vscode.window.showInformationMessage('请先打开要导出的 Markdown 笔记。');
+  }
+  private async exportDocument(document:vscode.TextDocument):Promise<void>{
+    if(this.exporting){void vscode.window.showInformationMessage('正在导出 PDF，请等待当前任务完成。');return;}
+    this.exporting=true;
+    try{
+      const source=document.getText(),origin=document.uri;
+      const destination=await vscode.window.showSaveDialog({defaultUri:origin.with({path:origin.path.replace(/\.md$/i,'')+'.pdf'}),filters:{PDF:['pdf']},title:'导出笔记为 PDF',saveLabel:'导出 PDF'});
+      if(!destination)return;
+      if(!destination.path.toLowerCase().endsWith('.pdf'))throw new Error('请选择 .pdf 文件名。');
+      const folder=vscode.workspace.getWorkspaceFolder(origin),root=await realpath(folder?.uri.fsPath??path.dirname(origin.fsPath));
+      const styleSheets:{id:string;source:string}[]=[];
+      for(const configured of vscode.workspace.getConfiguration('noteWorkbench',origin).get<string[]>('styleSheets',[])){
+        try{const file=await realpath(path.resolve(root,configured)),relative=path.relative(root,file);if(relative.startsWith('..')||path.isAbsolute(relative)||path.extname(file)!=='.css')continue;const uri=vscode.Uri.file(file);styleSheets.push({id:uri.toString(),source:Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8')});}catch{}
+      }
+      const completed=await vscode.window.withProgress({location:vscode.ProgressLocation.Notification,title:'正在导出 PDF',cancellable:true},async(progress,token)=>{
+        const abort=new AbortController(),subscription=token.onCancellationRequested(()=>abort.abort());if(token.isCancellationRequested)abort.abort();
+        try{
+          progress.report({message:'渲染正文、公式、图表和图片…'});
+          const pdf=await exportPdf({source,origin:origin.toString(),title:path.basename(document.fileName,'.md'),assets:path.join(this.context.extensionUri.fsPath,'dist','webview'),styleSheets,
+            browserPath:vscode.workspace.getConfiguration('noteWorkbench').get<string>('pdf.browserPath',''),signal:abort.signal,
+            resolve:async(from,target)=>{const resource=await this.resolveResource(vscode.Uri.parse(from),target);if(vscode.Uri.parse(resource.id).with({fragment:''}).toString()===origin.toString())resource.source=source;return resource;},
+            readResource:async id=>vscode.workspace.fs.readFile(vscode.Uri.parse(id).with({fragment:''})),
+          });
+          if(token.isCancellationRequested)return false;
+          await vscode.workspace.fs.writeFile(destination,pdf);return true;
+        }catch(error){if(token.isCancellationRequested)return false;throw error;}finally{subscription.dispose();}
+      });
+      if(completed)void vscode.window.showInformationMessage('PDF 已导出：'+path.basename(destination.fsPath),'打开 PDF').then(action=>{if(action)return vscode.env.openExternal(destination);});
+    }catch(error){void vscode.window.showErrorMessage('PDF 导出失败：'+(error instanceof Error?error.message:String(error)));}
+    finally{this.exporting=false;}
   }
 
   private async resolveResource(origin: vscode.Uri, href: string, webview?: vscode.Webview): Promise<Resource> {
@@ -156,6 +196,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.registerCustomEditorProvider(viewType, provider, { supportsMultipleEditorsPerDocument: true, webviewOptions: { retainContextWhenHidden: true } }),
     vscode.window.registerWebviewViewProvider('noteWorkbench.graph',graph,{webviewOptions:{retainContextWhenHidden:true}}),
     vscode.commands.registerCommand('noteWorkbench.openGraph',()=>graph.open()),
+    vscode.commands.registerCommand('noteWorkbench.exportPdf',()=>provider.exportCurrent()),
     vscode.commands.registerCommand('noteWorkbench.openEditor', async (uri?: vscode.Uri) => {
       uri ??= vscode.window.activeTextEditor?.document.uri ?? provider.active?.document.uri;
       if (uri) await vscode.commands.executeCommand('vscode.openWith', uri, viewType);

@@ -29,7 +29,7 @@ let deferred: Snapshot | undefined;
 let flushCell: (()=>void) | undefined;
 let composingCell = false;
 let cellRecovery: {source:string; replacements:ReturnType<typeof minimalEdit>} | undefined;
-let afterSync: 'save' | 'undo' | 'redo' | 'source' | undefined;
+let afterSync: 'save' | 'undo' | 'redo' | 'source' | 'exportPdf' | undefined;
 const recovered = api.getState();
 let mode: 'edit' | 'read' = 'edit';
 let showProperties = false;
@@ -79,7 +79,8 @@ content.addEventListener('click', event => {
 
 function flush() {
   clearTimeout(timer);
-  if (editor?.composing || composingCell || !snapshot || snapshot.readonly) return;
+  if (editor?.composing || composingCell || !snapshot) return;
+  if(snapshot.readonly){if(afterSync==='exportPdf'){afterSync=undefined;api.postMessage({type:'exportPdf'});}return;}
   const message = sync.next(crypto.randomUUID());
   if (message) api.postMessage({...message,replacements:hostEdits(hostSource,message.replacements)});
   else if (!sync.pending && !sync.conflict && sync.local === sync.source && afterSync) {
@@ -320,6 +321,7 @@ function navigation() {
     button('VS Code 源码', () => request('source')),
     button('保存', () => request('save'))
   );
+  nav.append(button('导出 PDF',()=>request('exportPdf')));
   nav.append(button(showProperties?'隐藏属性':'显示属性',()=>{
     showProperties=!showProperties;
     if(mode==='read') render();
@@ -400,6 +402,7 @@ function receive(message: Snapshot) {
 window.addEventListener('message',event => {
   const message=event.data;
   if(message?.type==='preview')floatingPreview.receive(message);
+  else if(message?.type==='requestExportPdf')request('exportPdf');
   else if(message?.type==='settings'){floatingPreview.enabled=message.blockPreview;floatingPreview.update(editor,mode==='edit'&&!sourceMode);}
   else if (message?.type === 'snapshot') receive(message);
   else if (message?.type === 'navigate' && typeof message.fragment === 'string') { if (snapshot) navigate(message.fragment); else pendingNavigation=message.fragment; }

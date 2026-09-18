@@ -4,7 +4,7 @@
 
 本项目为独立开发的 VS Code 扩展，非 Obsidian 官方产品，未获其官方背书；运行时无需安装 Obsidian 或 Obsidian Visualizer。Obsidian 名称及相关商标归其各自权利人所有。
 
-使用 TypeScript 开发，当前为 **0.4.1 开发预览，不是需求文档中的完整首版**。
+使用 TypeScript 开发，当前为 **0.5.0 开发预览，不是需求文档中的完整首版**。
 
 ## 本地运行
 
@@ -25,6 +25,7 @@ npm run build
 - Markdown/GFM、HTML 样式和静态 SVG；完整 Callout 类型、Wiki 链接、标题/块嵌入、高亮、注释、脚注、代码高亮、公式和 Mermaid。
 - 图片尺寸、音视频、离线 PDF 翻页和 Canvas 形状；YAML 属性显隐、cssclasses 与库内 CSS。
 - 默认实时预览直接输入、阅读/源码模式切换与 Ctrl+S 保存。
+- 导出 PDF：笔记右上角“··· → 导出 PDF”，或命令面板执行 **Note Workbench: 导出 PDF**，选择保存位置。
 - 非表格块编辑时，上方浮层实时显示渲染结果；设置 `noteWorkbench.editor.blockPreview.enabled` 默认开启。离开块同步文档，落盘由 Ctrl+S / VS Code Auto Save 负责。
 - 普通矩形 Markdown/HTML 表格的富文本展示、单击单元格直接输入、边缘增行列、右键菜单及拖动手柄。
 - 源码范围检查、文档版本冲突拒绝，保护未被编辑的正文。
@@ -33,6 +34,8 @@ npm run build
 正文默认在同一个 CodeMirror 文档中直接编辑：光标进入格式区域时显示对应语法，其余部分使用统一渲染结果。单元格单击输入并自动同步，无需“应用”。已实现范围和验证证据见 [官方格式兼容清单](docs/obsidian-compatibility.md)，没有用单篇报告代替全语法验收。
 
 ## 当前限制
+
+PDF 默认白底 A4、展开折叠块、隐藏编辑控件，导出点击时已同步的内容，无需先保存 Markdown。支持中文、普通表格、HTML 样式、公式、Mermaid、图片和笔记嵌入；多页表格重复表头。使用本机 Chrome / Edge，自动检测优先 Chrome；也可在 `noteWorkbench.pdf.browserPath` 指定可执行文件。没有浏览器时会给出提示，不自动下载浏览器。PDF/音视频附件显示文字提示，不合并附件页或播放内容；超宽表格、复杂打印 CSS 仍需检查导出结果。无法加载图片或渲染图表时报告失败，不假称成功。
 
 - Wiki 补全、语义查询和 query 嵌入仍待实现；图谱目前采用防抖全量扫描，尚无大库性能验收，也不自动导入旧扩展私有布局状态。跨篇导航和来源变化刷新已有实现，真实宿主验收未完成。
 - 合并单元格、嵌套表格、`colgroup`、省略闭合标签的 HTML 表格使用源码编辑；普通表格嵌在其他 HTML 块内时暂不提供结构控件。
@@ -45,7 +48,7 @@ npm run build
 
 ```powershell
 npm run package
-# 输出 artifacts/note-workbench-0.4.1.vsix
+# 输出 artifacts/note-workbench-0.5.0.vsix
 ```
 
 在 VS Code 扩展面板的“…”菜单中选择“从 VSIX 安装”。打包使用临时 publisher `local-development`，未注册商店身份。不要以该身份公开发布；正式命名前需确定迁移策略。

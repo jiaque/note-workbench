@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 — 2026-09-18
+
+- Add PDF export from the note menu and command palette, including synchronized unsaved edits.
+- Render with the existing Markdown/HTML pipeline and a local headless Chrome/Edge profile; wait for Mermaid, fonts and images before printing.
+- Add white A4 print styling, expanded callouts, repeated table headers, cancellation and explicit failure reporting.
+- Include Apache-2.0 license files in the packaged extension.
+
 ## 0.4.1 — 2026-09-18
 
 - Show complete, uniformly styled source in active Markdown headings; render their heading and inline HTML styles in the floating preview and inactive headings.

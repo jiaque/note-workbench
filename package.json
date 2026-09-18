@@ -2,7 +2,7 @@
   "name": "note-workbench",
   "displayName": "Note Workbench (Development)",
   "description": "An independent Markdown and HTML notebook editor for VS Code. Local development preview.",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "publisher": "local-development",
   "private": true,
   "license": "Apache-2.0",
@@ -30,6 +30,13 @@
     "configuration": {
       "title": "Note Workbench",
       "properties": {
+        "noteWorkbench.pdf.browserPath": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "restricted": true,
+          "description": "PDF 导出使用的 Edge / Chrome 可执行文件路径。留空自动检测本机浏览器，无需安装 npm。"
+        },
         "noteWorkbench.styleSheets": {
           "type": "array",
           "items": {
@@ -77,6 +84,10 @@
       }
     ],
     "commands": [
+      {
+        "command": "noteWorkbench.exportPdf",
+        "title": "Note Workbench: 导出 PDF"
+      },
       {
         "command": "noteWorkbench.openEditor",
         "title": "Note Workbench: 打开笔记编辑器"

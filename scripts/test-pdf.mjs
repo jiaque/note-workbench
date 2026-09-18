@@ -1,0 +1,20 @@
+import {mkdir,writeFile,readFile} from 'node:fs/promises';
+import {resolve,extname} from 'node:path';
+import {pathToFileURL,fileURLToPath} from 'node:url';
+import assert from 'node:assert/strict';
+import pdf from '../dist/pdf-export.cjs';
+
+const vault=resolve('test/fixtures/vault'),origin=pathToFileURL(resolve(vault,'PDF Export.md')).href;
+const source=`# PDF 导出验收\n\n## <span style="background:#953734;color:white;padding:4px 10px;display:block">中文标题与混排 HTML</span>\n\n中文正文、**粗体**、*斜体*、[外部链接](https://example.com)和行内公式 $E=mc^2$。\n\n> [!note]- 默认折叠的说明\n> 导出时展开此段，确保没有漏掉内容。\n\n$$\n\\frac{a}{b}+\\sqrt{x}=42\n$$\n\n\`\`\`mermaid\nflowchart LR\n A[开始] --> B[检查中文] --> C[完成导出]\n\`\`\`\n\n![[Second]]\n\n## 跨页表格\n\n| 序号 | 项目 | 结果 |\n|---|---|---|\n${Array.from({length:85},(_,i)=>`| ${i+1} | 第 ${i+1} 项中文内容 | 通过 **验证** |`).join('\n')}\n\n最后一行：导出结束。\n`;
+await mkdir('test-results/pdf',{recursive:true});
+const resolver=async(from,target)=>{const hash=target.indexOf('#'),name=hash<0?target:target.slice(0,hash),fragment=hash<0?'':target.slice(hash);const id=new URL(name+(extname(name)?'':'.md'),from).href,file=fileURLToPath(id),extension=extname(file);return{id:id+fragment,url:id,extension,source:extension==='.md'?await readFile(file,'utf8'):undefined};};
+const result=await pdf.exportPdf({source,origin,title:'PDF 导出验收',assets:resolve('dist/webview'),resolve:resolver,readResource:async id=>readFile(fileURLToPath(id)),browserPath:process.env.NOTE_WORKBENCH_PDF_BROWSER});
+assert.equal(result.subarray(0,5).toString(),'%PDF-');assert.ok(result.length>20_000);
+await writeFile('test-results/pdf/export-smoke.pdf',result);
+console.log(`PASS PDF smoke: ${result.length} bytes; source length ${source.length} unchanged; test-results/pdf/export-smoke.pdf`);
+const options={source:'# 图片与 HTML 表格\n\n![本地 SVG 图片](sample.svg)\n\n<table><thead><tr><th>名称</th><th>说明</th></tr></thead><tbody><tr><td><b>HTML 表格</b></td><td>保留格式</td></tr></tbody></table>',origin,title:'附件验收',assets:resolve('dist/webview'),resolve:resolver,readResource:async id=>readFile(fileURLToPath(id)),browserPath:process.env.NOTE_WORKBENCH_PDF_BROWSER};
+await writeFile('test-results/pdf/images.pdf',await pdf.exportPdf(options));
+const abort=new AbortController();abort.abort();
+await assert.rejects(pdf.exportPdf({...options,signal:abort.signal}),/取消/);
+await assert.rejects(pdf.exportPdf({...options,source:'![缺失图片](does-not-exist.png)'}),/图片加载失败/);
+console.log('PASS PDF images, HTML table, cancellation and missing-image failure');

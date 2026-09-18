@@ -9,6 +9,7 @@ artifacts/**
 test-results/**
 dist/test/**
 dist/preview-render.*
+dist/pdf-export.*
 dist/**/*.map
 tsconfig.json
 package-lock.json
