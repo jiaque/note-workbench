@@ -68,4 +68,4 @@ Git 已按用户授权在本目录初始化，作者沿用指定现有仓库的�
 - [官方格式兼容与验收清单](docs/obsidian-compatibility.md)
 - [第三方依赖声明](THIRD_PARTY_NOTICES.md)
 
-项目自有代码的公开许可证尚待所有者确定，目前 `UNLICENSED`，仅作本地开发交付。第三方依赖按各自许可证使用，构建工具会生成依赖许可证清单并纳入 VSIX。当前未复制原 Obsidian Visualizer 的实现代码。
+项目自有代码采用 [Apache License 2.0](LICENSE)，项目署名见 [NOTICE](NOTICE)。第三方依赖保留各自的许可证及声明，构建工具会生成依赖许可证清单并纳入 VSIX。当前未复制原 Obsidian Visualizer 的实现代码。此许可证不授予 Obsidian 等第三方商标的使用权。

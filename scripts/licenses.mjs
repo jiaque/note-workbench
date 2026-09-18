@@ -1,6 +1,6 @@
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 const lock = JSON.parse(await readFile('package-lock.json', 'utf8'));
-let output = '# Third-party notices\n\nGenerated from package-lock.json for local development. Project-owned code remains UNLICENSED until its owner selects a public license.\n\n';
+let output = '# Third-party notices\n\nGenerated from package-lock.json. Project-owned code is licensed under Apache-2.0; see LICENSE. Third-party components retain their respective licenses and notices below.\n\n';
 for (const [location, entry] of Object.entries(lock.packages)) {
   if (!location || entry.dev) continue;
   let pkg;

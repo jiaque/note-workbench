@@ -5,7 +5,7 @@
   "version": "0.4.1",
   "publisher": "local-development",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "engines": {
     "vscode": "^1.100.0",
     "node": ">=22"
@@ -129,7 +129,7 @@
     "test": "tsx --test test/*.test.ts",
     "test:extension": "node scripts/test-extension.mjs",
     "preview": "node scripts/preview.mjs",
-    "package": "npm run build && node scripts/licenses.mjs && vsce package --allow-missing-repository --no-rewrite-relative-links --skip-license --out artifacts/",
+    "package": "npm run build && node scripts/licenses.mjs && vsce package --allow-missing-repository --no-rewrite-relative-links --out artifacts/",
     "verify:package": "vsce ls --tree"
   },
   "dependencies": {

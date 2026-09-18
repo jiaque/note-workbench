@@ -1,6 +1,6 @@
 # Third-party notices
 
-Generated from package-lock.json for local development. Project-owned code remains UNLICENSED until its owner selects a public license.
+Generated from package-lock.json. Project-owned code is licensed under Apache-2.0; see LICENSE. Third-party components retain their respective licenses and notices below.
 
 ## @antfu/install-pkg 2.1.0
 
