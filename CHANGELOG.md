@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-09-18
+
+- Replace block edit buttons and explicit draft application with a persistent full-document Live Preview editor.
+- Reveal formatting syntax at the caret and share sanitized rendering with reading view; preserve inline HTML styles, nested emphasis and inline math.
+- Edit table cells with one click and automatic synchronization; retain input focus across acknowledgements and cell changes.
+- Serialize host edits without overwriting later typing, preserve CRLF offsets, and drain queued changes before saving.
+- Add synchronization, conflict, newline and decoration regression tests; record browser interaction evidence and remaining host validation separately.
+
 ## 0.2.0 — Formatting compatibility preview
 
 - 去掉顶部品牌栏和重复文件名，表格操作收进右键菜单与边缘控件，保留富文本展示。
