@@ -3,6 +3,7 @@ import type { Rendered } from './render';
 export interface Snapshot extends Rendered { type: 'snapshot'; source: string; version: number; name: string; readonly: boolean; operationId?: string }
 export type ClientMessage =
   | { type: 'ready' }
+  | {type:'preview';requestId:number;source:string;from:number;to:number}
   | { type: 'edit'; baseVersion: number; operationId: string; replacements: Replacement[] }
   | { type: 'save' | 'source' | 'undo' | 'redo' }
   | { type: 'openLink'; href: string };

@@ -14,12 +14,12 @@ export const previewMode = StateEffect.define<boolean>();
 export const previewFocus = StateEffect.define<boolean>();
 export const liveParser = (source: string): any => parser.parse(source);
 
-export function livePreview(createBlock: (block: Block, view: EditorView) => HTMLElement) {
+export function livePreview(createBlock: (block: Block, view: EditorView) => HTMLElement, inlineOnly=false) {
   const dirtyTables = new Set<number>();
   class RenderWidget extends WidgetType {
     constructor(readonly block: Block, readonly inline = false) { super(); }
     eq(other: RenderWidget) {
-      const activeTable = typeof document !== 'undefined' && document.activeElement?.tagName === 'TEXTAREA' ? document.activeElement.closest<HTMLElement>('.table-card') : null;
+      const activeTable = typeof document !== 'undefined' && document.activeElement?.closest('.cell-editor') ? document.activeElement.closest<HTMLElement>('.table-card') : null;
       if (this.block.from !== other.block.from || this.inline !== other.inline) return false;
       if (activeTable?.dataset.sourceFrom === String(this.block.from)) {
         if (this.block.html !== other.block.html) dirtyTables.add(this.block.from);
@@ -103,7 +103,7 @@ export function livePreview(createBlock: (block: Block, view: EditorView) => HTM
       const complex = ['table', 'html', 'math', 'code', 'yaml', 'thematicBreak'].includes(node.type)
         || (node.type === 'blockquote' && /^>\s*\[!/.test(raw))
         || (node.type === 'paragraph' && /^!\[/.test(raw));
-      if ((root || complex) && block && (!active(from, to) || table)) {
+      if (!inlineOnly && (root || complex) && block && (!active(from, to) || table)) {
         ranges.push(Decoration.replace({ block: true, widget: new RenderWidget(block) }).range(from, to)); return;
       }
       if (node.type === 'heading') {
@@ -147,7 +147,7 @@ export function livePreview(createBlock: (block: Block, view: EditorView) => HTM
       for (const child of children) {
         if (child.type !== 'html') continue;
         const tag = /^<(\/?)([\w-]+)\b/.exec(child.value);
-        if (!tag || !['span','sub','sup','kbd','u','mark','abbr'].includes(tag[2])) continue;
+        if (!tag || !['span','sub','sup','kbd','u','mark','abbr','strong','b','em','i','code','a'].includes(tag[2])) continue;
         if (!tag[1]) {
           const index = counts.get(tag[2]) ?? 0; counts.set(tag[2],index+1);
           stack.push({tag:tag[2],node:child,element:scope?.content.querySelectorAll(tag[2])[index]});

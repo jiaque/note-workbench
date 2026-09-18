@@ -1,6 +1,6 @@
 # Note Workbench
 
-VS Code 独立笔记扩展，使用 TypeScript 开发。当前为 **0.3.0 开发预览，不是需求文档中的完整首版**。
+VS Code 独立笔记扩展，使用 TypeScript 开发。当前为 **0.4.0 开发预览，不是需求文档中的完整首版**。
 
 ## 本地运行
 
@@ -17,10 +17,11 @@ npm run build
 
 ## 这个开发预览包含什么
 
-- 独立自定义 Markdown 编辑器与活动栏笔记列表。
+- 独立自定义 Markdown 编辑器与活动栏连接图，支持全局/局部图、反向链接、四边停靠和参数记忆。
 - Markdown/GFM、HTML 样式和静态 SVG；完整 Callout 类型、Wiki 链接、标题/块嵌入、高亮、注释、脚注、代码高亮、公式和 Mermaid。
 - 图片尺寸、音视频、离线 PDF 翻页和 Canvas 形状；YAML 属性显隐、cssclasses 与库内 CSS。
 - 默认实时预览直接输入、阅读/源码模式切换与 Ctrl+S 保存。
+- 非表格块编辑时，上方浮层实时显示渲染结果；设置 `noteWorkbench.editor.blockPreview.enabled` 默认开启。离开块同步文档，落盘由 Ctrl+S / VS Code Auto Save 负责。
 - 普通矩形 Markdown/HTML 表格的富文本展示、单击单元格直接输入、边缘增行列、右键菜单及拖动手柄。
 - 源码范围检查、文档版本冲突拒绝，保护未被编辑的正文。
 - 合成笔记样本、核心测试、VS Code 宿主集成测试和本地打包脚本。
@@ -29,7 +30,7 @@ npm run build
 
 ## 当前限制
 
-- 图谱、反向链接、Wiki 补全、语义查询和 query 嵌入仍待实现；跨篇导航和来源变化刷新已有实现，真实宿主验收未完成。
+- Wiki 补全、语义查询和 query 嵌入仍待实现；图谱目前采用防抖全量扫描，尚无大库性能验收，也不自动导入旧扩展私有布局状态。跨篇导航和来源变化刷新已有实现，真实宿主验收未完成。
 - 合并单元格、嵌套表格、`colgroup`、省略闭合标签的 HTML 表格使用源码编辑；普通表格嵌在其他 HTML 块内时暂不提供结构控件。
 - 行移动不跨 Markdown 表头或 HTML 分区；列移动同步保留原始单元格内容和 Markdown 对齐标记。
 - 正文输入短暂合并后同步到 VS Code 文本文档，Ctrl+S 会先排空编辑队列再保存。外部冲突时停止覆盖并保留本地内容，可从笔记菜单复制；真实宿主关闭恢复、输入法和撤销验收仍需完成。
@@ -40,7 +41,7 @@ npm run build
 
 ```powershell
 npm run package
-# 输出 artifacts/note-workbench-0.3.0.vsix
+# 输出 artifacts/note-workbench-0.4.0.vsix
 ```
 
 在 VS Code 扩展面板的“…”菜单中选择“从 VSIX 安装”。打包使用临时 publisher `local-development`，未注册商店身份。不要以该身份公开发布；正式命名前需确定迁移策略。

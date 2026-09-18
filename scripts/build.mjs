@@ -16,6 +16,7 @@ await cp('node_modules/pdfjs-dist/build/pdf.worker.min.mjs','dist/webview/pdf/pd
 const mathjaxVersion = JSON.parse(await readFile('node_modules/mathjax-full/package.json', 'utf8')).version;
 const define = { PACKAGE_VERSION: JSON.stringify(mathjaxVersion) };
 const jobs = [
+  { entryPoints:['src/webview/graph.ts'],outdir:'dist/webview',bundle:true,platform:'browser',format:'iife',target:'chrome130',minify:true },
   { entryPoints: ['src/extension.ts'], outfile: 'dist/extension.cjs', bundle: true, platform: 'node', format: 'cjs', target: 'node20', external: ['vscode'], sourcemap: true, define },
   { entryPoints: ['src/webview/editor.ts'], outdir: 'dist/webview', bundle: true, platform: 'browser', format: 'esm', splitting: true, target: 'chrome130', sourcemap: true, chunkNames: 'chunks/[name]-[hash]', minify: true },
   { entryPoints: ['test/extension/suite.ts'], outfile: 'dist/test/suite.cjs', bundle: true, platform: 'node', format: 'cjs', target: 'node20', external: ['vscode'], sourcemap: true, define },

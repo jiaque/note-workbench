@@ -2,7 +2,7 @@
   "name": "note-workbench",
   "displayName": "Note Workbench (Development)",
   "description": "An independent Markdown and HTML notebook editor for VS Code. Local development preview.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publisher": "local-development",
   "private": true,
   "license": "UNLICENSED",
@@ -37,6 +37,30 @@
           },
           "default": [],
           "description": "笔记库内的 CSS 文件相对路径，按顺序应用到笔记视图。配合 YAML cssclasses 自定义展示。修改后重新打开笔记。"
+        },
+        "noteWorkbench.editor.blockPreview.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "编辑非表格块时，在其上方显示实时渲染浮层。离开后修改同步到文档，磁盘保存遵循 VS Code Auto Save 或 Ctrl+S。"
+        },
+        "noteWorkbench.graph.include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "连接图包含的文件 glob；留空包含笔记库内全部 Markdown。"
+        },
+        "noteWorkbench.graph.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/{node_modules,.git,.npm-cache}/**"
+          ],
+          "description": "连接图排除的文件 glob。"
         }
       }
     },
@@ -63,7 +87,11 @@
       },
       {
         "command": "noteWorkbench.rebuildIndex",
-        "title": "Note Workbench: 刷新笔记列表"
+        "title": "Note Workbench: 刷新连接图"
+      },
+      {
+        "command": "noteWorkbench.openGraph",
+        "title": "Note Workbench: 打开连接图"
       }
     ],
     "menus": {
@@ -80,15 +108,16 @@
         {
           "id": "noteWorkbench",
           "title": "Note Workbench",
-          "icon": "media/notebook.svg"
+          "icon": "media/graph.svg"
         }
       ]
     },
     "views": {
       "noteWorkbench": [
         {
-          "id": "noteWorkbench.notes",
-          "name": "笔记"
+          "type": "webview",
+          "id": "noteWorkbench.graph",
+          "name": "连接图"
         }
       ]
     }
@@ -108,6 +137,7 @@
     "@codemirror/lang-markdown": "6.5.2",
     "@codemirror/state": "6.7.5",
     "@codemirror/view": "6.43.12",
+    "d3-force": "3.0.0",
     "lucide": "0.577.0",
     "mermaid": "12.0.0",
     "parse5": "8.0.1",
@@ -126,6 +156,7 @@
     "yaml": "2.9.1"
   },
   "devDependencies": {
+    "@types/d3-force": "3.0.10",
     "@types/node": "26.6.1",
     "@types/vscode": "1.100.0",
     "@vscode/test-electron": "3.1.0",

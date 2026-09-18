@@ -21,6 +21,15 @@
 
 ## 2. 架构决策
 
+### 0.4.0 交互补充实施
+
+- `webview/block-preview.ts` 在活动源码块上方显示有高度限制的只读浮层，130ms 合并输入；按完整文档解析后选出活动块，保留脚注等上下文。与正文共用安全渲染与资源解析，前后端均用请求编号丢弃过期结果。预览异步资源请求不占用文档编辑/保存串行队列。
+- `noteWorkbench.editor.blockPreview.enabled` 默认开启，资源级配置即时通知已打开编辑器。关闭浮层不影响输入同步。上方空间不足时回退到当前输入行下方；Esc 关闭当前块浮层。
+- 单元格采用局部 CodeMirror 行内格式装饰，源码仍通过原表格范围补丁进入整篇文档；不建立第二套持久文件或撤销记录。Tab/Shift+Tab 换格，点击位置映射到局部文本坐标，组合输入期间延迟宿主回包。
+- 实时预览 CSS 最后加载，避免旧样式覆盖。压缩空行展示高度，去掉空锚点/隐藏属性的最小占位高度，并扣除块间重复外边距；源文本不变。
+- `graph-provider.ts` 从工作区 Markdown 与已打开 TextDocument 建图；`shared/graph.ts` 解析 Wiki、Markdown、HTML 关系，过滤代码/注释/元数据。独立 D3 SVG Webview 支持图谱布局、导航和反向链接，全局/局部参数分别保存在 workspaceState。四边停靠行为重新实现，未复制旧扩展 bundle，也未自动导入旧扩展私有状态。
+- 关系扫描目前为防抖全量重建，没有大库性能验收；编辑关闭恢复、真实 IME、宿主撤销/保存及设置切换仍以实机测试为准。详见 [开发状态](status.md)。
+
 ### 2.1 数据与宿主
 
 采用 TypeScript、VS Code 稳定 API、`CustomTextEditorProvider` 和独立 Webview。`TextDocument` 是当前打开文档的权威状态；未打开文档从 `workspace.fs` 读取。编辑器前端只维护可重新同步的显示状态，图谱和嵌入只维护可重建索引。

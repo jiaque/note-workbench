@@ -1,0 +1,53 @@
+import {forceSimulation,forceManyBody,forceLink,forceCollide,forceX,forceY,type SimulationNodeDatum} from 'd3-force';
+import type {GraphData} from '../shared/graph';
+import './graph.css';
+declare function acquireVsCodeApi():{postMessage(message:unknown):void};
+const api=acquireVsCodeApi(),root=document.getElementById('graph-app')!;
+root.innerHTML=`<header><strong>连接图</strong><button id="expand">展开大图</button><button id="refresh">刷新</button></header><section id="stage"><svg role="img" aria-label="笔记连接图"><defs><marker id="arrow" viewBox="0 0 10 10" refX="20" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs><g id="scene"></g></svg><div id="empty"></div><details id="controls" open><summary>图谱设置</summary><div class="controls-body"><label>范围<select id="mode"><option value="global">全局图谱</option><option value="local">当前笔记局部图</option></select></label><label>过滤<input id="filter" placeholder="文件名 / path:路径"></label><label>停靠<select id="dock"><option value="top">上方</option><option value="bottom">下方</option><option value="left">左侧</option><option value="right">右侧</option></select></label><label>排列<select id="orientation"><option value="horizontal">横向</option><option value="vertical">纵向</option></select></label><label>深度<input id="depth" type="range" min="1" max="5" value="1"></label><label>节点<input id="size" type="range" min="2" max="20" value="6"></label><label>文字<input id="font" type="range" min="8" max="24" value="12"></label><label>斥力<input id="repulsion" type="range" min="100" max="4000" value="800"></label><label>距离<input id="distance" type="range" min="30" max="400" value="100"></label><label>引力<input id="strength" type="range" min="0.01" max="1" step="0.01" value="0.15"></label><label>中心<input id="center" type="range" min="0" max="0.2" step="0.01" value="0.03"></label><label>碰撞<input id="collision" type="range" min="5" max="100" value="25"></label><label>阻尼<input id="damping" type="range" min="0.1" max="0.9" step="0.05" value="0.4"></label><label><input id="forward" type="checkbox" checked>前向链接</label><label><input id="backward" type="checkbox" checked>反向链接</label><label><input id="missing" type="checkbox" checked>未创建笔记</label><button id="reset">重置视野</button></div></details></section><details id="backlinks"><summary>当前笔记的反向链接</summary><div></div></details><footer id="status">正在读取笔记关系…</footer>`;
+const svg=root.querySelector('svg')!,scene=document.getElementById('scene')!,stage=document.getElementById('stage')!,controls=document.getElementById('controls')!,status=document.getElementById('status')!;
+const input=(id:string)=>document.getElementById(id) as HTMLInputElement;
+type Node=GraphData['nodes'][number]&SimulationNodeDatum;
+let data:GraphData={nodes:[],links:[]},simulation=forceSimulation<Node>([]).stop(),scale=1,dx=0,dy=0;
+const positions=new Map<string,{x:number;y:number}>();
+const transform=()=>scene.setAttribute('transform',`translate(${stage.clientWidth/2+dx},${stage.clientHeight/2+dy}) scale(${scale})`);
+const settings=()=>Object.fromEntries([...controls.querySelectorAll<HTMLInputElement>('input,select')].map(n=>[n.id,n.type==='checkbox'?n.checked:n.value]));
+const defaults=settings();
+let currentMode='global',profiles:Record<string,Record<string,unknown>>={};
+function restore(values:Record<string,unknown>){for(const [key,value]of Object.entries(values)){const node=controls.querySelector<HTMLInputElement>(`#${CSS.escape(key)}`);if(!node)continue;if(node.type==='checkbox')node.checked=!!value;else node.value=String(value);}}
+function persist(){profiles[currentMode]=settings();api.postMessage({type:'layout',value:{mode:currentMode,profiles}});}
+function layout(){controls.dataset.dock=input('dock').value;controls.dataset.orientation=input('orientation').value;}
+function draw(){
+  simulation.stop();scene.replaceChildren();layout();
+  const local=input('mode').value==='local',forward=input('forward').checked,backward=input('backward').checked;
+  const reachable=new Set(data.active?[data.active]:[]);
+  if(local)for(let depth=0;depth<Number(input('depth').value);depth++){const previous=new Set(reachable);for(const link of data.links){if(forward&&previous.has(link.source))reachable.add(link.target);if(backward&&previous.has(link.target))reachable.add(link.source);}}
+  const search=input('filter').value.toLocaleLowerCase(),pathOnly=search.startsWith('path:'),query=search.replace(/^(path|filename):/,'').trim();
+  const nodes:Node[]=data.nodes.filter(n=>(!local||reachable.has(n.id))&&(input('missing').checked||!n.missing)&&(pathOnly?n.path:n.name).toLocaleLowerCase().includes(query)).map(n=>({...n,...positions.get(n.id)}));
+  const ids=new Set(nodes.map(n=>n.id)),links=data.links.filter(l=>ids.has(l.source)&&ids.has(l.target)&&(local?(forward&&reachable.has(l.source)||backward&&reachable.has(l.target)):forward||backward)).map(l=>({...l}));
+  status.textContent=`${nodes.length} 个节点 · ${links.length} 条连接 · 双击节点打开笔记`;
+  document.getElementById('empty')!.textContent=nodes.length?'':local&&!data.active?'先打开一篇 Markdown 笔记':'没有匹配的笔记';
+  const ns='http://www.w3.org/2000/svg',lines=links.map(link=>{const line=document.createElementNS(ns,'line');line.classList.add('edge');line.setAttribute('marker-end','url(#arrow)');scene.append(line);return line;});
+  const elements=nodes.map(node=>{
+    const group=document.createElementNS(ns,'g');group.classList.add('node');if(node.missing)group.classList.add('missing');if(node.id===data.active)group.classList.add('active');group.setAttribute('tabindex','0');group.setAttribute('role','link');group.setAttribute('aria-label',node.name);
+    const circle=document.createElementNS(ns,'circle');circle.setAttribute('r',String(Number(input('size').value)+Math.min(10,Math.sqrt(data.links.filter(l=>l.target===node.id).length))));
+    const text=document.createElementNS(ns,'text');text.textContent=node.name.replace(/\.md$/i,'');text.setAttribute('y','-13');text.setAttribute('text-anchor','middle');text.setAttribute('font-size',input('font').value);
+    const title=document.createElementNS(ns,'title');title.textContent=node.path;group.append(circle,text,title);scene.append(group);
+    const open=()=>{if(!node.missing)api.postMessage({type:'open',id:node.id});};group.ondblclick=open;group.onkeydown=event=>{if(event.key==='Enter')open();};
+    group.onmouseenter=()=>{const connected=new Set([node.id]);links.forEach((l:any,i)=>{const source=typeof l.source==='string'?l.source:l.source.id,target=typeof l.target==='string'?l.target:l.target.id;const hit=source===node.id||target===node.id;lines[i].classList.toggle('highlight',hit);if(hit){connected.add(source);connected.add(target);const mutual=data.links.some(edge=>edge.source===target&&edge.target===source);lines[i].style.stroke=mutual?'#9764d7':source===node.id?'#278759':'#cb5757';}});elements.forEach((el,i)=>el.classList.toggle('faded',!connected.has(nodes[i].id)));};
+    group.onmouseleave=()=>{elements.forEach(el=>el.classList.remove('faded'));lines.forEach(line=>{line.classList.remove('highlight');line.style.removeProperty('stroke');});};
+    group.onpointerdown=event=>{event.stopPropagation();group.setPointerCapture(event.pointerId);node.fx=node.x;node.fy=node.y;simulation.alphaTarget(.15).restart();};
+    group.onpointermove=event=>{if(!group.hasPointerCapture(event.pointerId))return;const bounds=svg.getBoundingClientRect();node.fx=(event.clientX-bounds.left-stage.clientWidth/2-dx)/scale;node.fy=(event.clientY-bounds.top-stage.clientHeight/2-dy)/scale;};
+    group.onpointerup=event=>{group.releasePointerCapture(event.pointerId);node.fx=null;node.fy=null;simulation.alphaTarget(0);};group.onpointercancel=()=>{node.fx=null;node.fy=null;simulation.alphaTarget(0);};return group;
+  });
+  simulation=forceSimulation(nodes).force('charge',forceManyBody().strength(-Number(input('repulsion').value))).force('link',forceLink<Node,any>(links).id(n=>n.id).distance(Number(input('distance').value)).strength(Number(input('strength').value))).force('collision',forceCollide(Number(input('collision').value))).force('x',forceX(0).strength(Number(input('center').value))).force('y',forceY(0).strength(Number(input('center').value))).velocityDecay(Number(input('damping').value));
+  simulation.on('tick',()=>{nodes.forEach((n,i)=>{elements[i].setAttribute('transform',`translate(${n.x},${n.y})`);positions.set(n.id,{x:n.x!,y:n.y!});});links.forEach((link:any,i)=>{for(const [key,value]of Object.entries({x1:link.source.x,y1:link.source.y,x2:link.target.x,y2:link.target.y}))lines[i].setAttribute(key,String(value));});});
+  const list=document.querySelector('#backlinks div')!;list.replaceChildren();for(const link of data.links.filter(l=>l.target===data.active)){const node=data.nodes.find(n=>n.id===link.source)!;const button=document.createElement('button');button.textContent=node.path;button.onclick=()=>api.postMessage({type:'open',id:node.id});list.append(button);}if(!list.childNodes.length)list.textContent='暂无反向链接';transform();
+}
+function change(){const next=input('mode').value;if(next!==currentMode){profiles[currentMode]={...settings(),mode:currentMode};currentMode=next;restore({...defaults,...profiles[next],mode:next});}persist();draw();}
+controls.addEventListener('input',change);controls.addEventListener('change',change);
+input('expand').onclick=()=>api.postMessage({type:'expand'});input('refresh').onclick=()=>api.postMessage({type:'refresh'});input('reset').onclick=()=>{scale=1;dx=dy=0;transform();};
+svg.addEventListener('wheel',event=>{event.preventDefault();scale=Math.max(.1,Math.min(5,scale*Math.exp(-event.deltaY*.001)));transform();},{passive:false});
+let pan:{x:number;y:number}|undefined;
+svg.addEventListener('pointerdown',event=>{svg.setPointerCapture(event.pointerId);pan={x:event.clientX-dx,y:event.clientY-dy};});svg.addEventListener('pointermove',event=>{if(pan){dx=event.clientX-pan.x;dy=event.clientY-pan.y;transform();}});svg.addEventListener('pointerup',()=>{pan=undefined;});svg.addEventListener('pointercancel',()=>{pan=undefined;});new ResizeObserver(transform).observe(stage);
+window.addEventListener('message',event=>{const message=event.data;if(message?.type==='graph'){data=message;draw();}if(message?.type==='layout'){const saved=message.value??{};currentMode=saved.mode==='local'?'local':'global';profiles=saved.profiles??{};restore({...defaults,...(saved.profiles?profiles[currentMode]:saved),mode:currentMode});layout();draw();}if(message?.type==='error')status.textContent=message.message;});
+api.postMessage({type:'ready'});

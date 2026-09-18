@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 — 2026-09-18
+
+- Add default-on live block preview overlay with shared rendering, stale-result protection and a VS Code setting.
+- Keep blur synchronization separate from disk saving; retain Ctrl+S and VS Code Auto Save semantics.
+- Replace table textareas with formatted inline editors, remove cell outlines and restore compact layout/style precedence.
+- Replace the duplicate file sidebar with an independent interactive connection graph, local/global scopes, backlinks, filters and persisted dock/orientation settings.
+- Add graph resolution and preview regression coverage; document browser evidence separately from blocked host integration tests.
+
 ## 0.3.0 — 2026-09-18
 
 - Replace block edit buttons and explicit draft application with a persistent full-document Live Preview editor.

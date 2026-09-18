@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import {GraphProvider} from './graph-provider';
 import { randomBytes } from 'node:crypto';
 import { realpath } from 'node:fs/promises';
 import * as path from 'node:path';
@@ -14,10 +15,10 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
   private queues = new Map<string, Promise<void>>();
   private panels = new Set<vscode.WebviewPanel>();
   private destinations = new Map<string, string>();
-  constructor(private context: vscode.ExtensionContext) {}
+  constructor(private context: vscode.ExtensionContext, private graph?:GraphProvider) {}
 
   async resolveCustomTextEditor(document: vscode.TextDocument, panel: vscode.WebviewPanel): Promise<void> {
-    this.panels.add(panel); this.active = { document, panel };
+    this.panels.add(panel); this.active = { document, panel }; this.graph?.setActive(document.uri);
     const folder = vscode.workspace.getWorkspaceFolder(document.uri);
     panel.webview.options = { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'dist'), ...(folder ? [folder.uri] : [vscode.Uri.joinPath(document.uri, '..')])] };
     const styleSheets:vscode.Uri[]=[];
@@ -26,6 +27,8 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
       try{const file=await realpath(path.resolve(vaultRoot,relativePath)),relative=path.relative(vaultRoot,file);if(relative.startsWith('..')||path.isAbsolute(relative)||path.extname(file).toLowerCase()!=='.css')continue;styleSheets.push(vscode.Uri.file(file));}catch{/* Missing custom styles do not prevent opening a note. */}
     }
     panel.webview.html = this.html(panel.webview,styleSheets);
+    const sendSettings=()=>panel.webview.postMessage({type:'settings',blockPreview:vscode.workspace.getConfiguration('noteWorkbench',document.uri).get('editor.blockPreview.enabled',true)});
+    const config=vscode.workspace.onDidChangeConfiguration(event=>{if(event.affectsConfiguration('noteWorkbench.editor.blockPreview.enabled',document.uri))void sendSettings();});
     let disposed = false, renderRequest = 0, acknowledgedOperation: string | undefined;
     const sendSnapshot = async (operationId?: string) => {
       if (disposed) return;
@@ -46,13 +49,26 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
     const watcher = vscode.workspace.createFileSystemWatcher('**/*.{md,canvas}');
     const refresh = () => { void sendSnapshot(); };
     const watched = [watcher.onDidChange(refresh),watcher.onDidCreate(refresh),watcher.onDidDelete(refresh)];
-    const state = panel.onDidChangeViewState(() => { if (panel.active) this.active = { document, panel }; });
+    const state = panel.onDidChangeViewState(() => { if (panel.active) { this.active = { document, panel }; this.graph?.setActive(document.uri); } });
+    let previewRequest=0;
     const messages = panel.webview.onDidReceiveMessage(message => {
+      if(message?.type==='preview'){
+        if(disposed||typeof message.source!=='string'||message.source.length>5_000_000||!Number.isInteger(message.requestId)||!Number.isInteger(message.from)||!Number.isInteger(message.to))return;
+        const request=++previewRequest;
+        void (async()=>{
+          try{
+            const rendered=renderDocument(message.source);
+            rendered.blocks=rendered.blocks.filter(block=>block.from>=message.from&&block.to<=message.to&&block.kind!=='footnotes');
+            await hydrateResources(rendered,document.uri.toString(),async(origin,target)=>this.resolveResource(vscode.Uri.parse(origin),target,panel.webview));
+            if(!disposed&&request===previewRequest)await panel.webview.postMessage({type:'preview',requestId:message.requestId,html:rendered.blocks.map(block=>block.html).join('')});
+          }catch{if(!disposed&&request===previewRequest)await panel.webview.postMessage({type:'preview',requestId:message.requestId,html:'暂时无法渲染，源码已保留。',error:true});}
+        })();return;
+      }
       const key = document.uri.toString();
       const next = (this.queues.get(key) ?? Promise.resolve()).then(async () => {
         if (disposed || !message || typeof message.type !== 'string') return;
         switch (message.type) {
-          case 'ready': await sendSnapshot(); return;
+          case 'ready': await sendSettings(); await sendSnapshot(); return;
           case 'edit': {
             if (!validEdit(message)) throw new Error('无效编辑请求。');
             if (document.version !== message.baseVersion) { await panel.webview.postMessage({ type: 'conflict', operationId: message.operationId }); sendSnapshot(); return; }
@@ -78,7 +94,7 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
       this.queues.set(key, next);
       void next.finally(() => { if (this.queues.get(key) === next) this.queues.delete(key); });
     });
-    panel.onDidDispose(() => { disposed = true; changes.dispose(); watcher.dispose(); watched.forEach(item=>item.dispose()); messages.dispose(); state.dispose(); this.panels.delete(panel); if (this.active?.panel === panel) this.active = undefined; });
+    panel.onDidDispose(() => { disposed = true; config.dispose(); changes.dispose(); watcher.dispose(); watched.forEach(item=>item.dispose()); messages.dispose(); state.dispose(); this.panels.delete(panel); if (this.active?.panel === panel) this.active = undefined; });
   }
 
   private async resolveResource(origin: vscode.Uri, href: string, webview?: vscode.Webview): Promise<Resource> {
@@ -134,27 +150,17 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
   dispose(): void { for (const panel of this.panels) panel.dispose(); }
 }
 
-class Notes implements vscode.TreeDataProvider<vscode.Uri>, vscode.Disposable {
-  private changed = new vscode.EventEmitter<void>();
-  readonly onDidChangeTreeData = this.changed.event;
-  private watcher = vscode.workspace.createFileSystemWatcher('**/*.md');
-  private subscriptions = [this.watcher.onDidCreate(() => this.refresh()), this.watcher.onDidDelete(() => this.refresh())];
-  refresh() { this.changed.fire(); }
-  async getChildren() { return (await vscode.workspace.findFiles('**/*.md', '**/{node_modules,.git,.npm-cache}/**', 2000)).sort((a, b) => a.path.localeCompare(b.path)); }
-  getTreeItem(uri: vscode.Uri) { const item = new vscode.TreeItem(path.basename(uri.fsPath)); item.description = vscode.workspace.asRelativePath(uri); item.resourceUri = uri; item.command = { command: 'noteWorkbench.openEditor', title: '打开笔记', arguments: [uri] }; return item; }
-  dispose() { this.changed.dispose(); this.watcher.dispose(); this.subscriptions.forEach(item => item.dispose()); }
-}
-
 export function activate(context: vscode.ExtensionContext) {
-  const provider = new NotebookProvider(context), notes = new Notes();
-  context.subscriptions.push(provider, notes,
+  const graph=new GraphProvider(context),provider = new NotebookProvider(context,graph);
+  context.subscriptions.push(provider, graph,
     vscode.window.registerCustomEditorProvider(viewType, provider, { supportsMultipleEditorsPerDocument: true, webviewOptions: { retainContextWhenHidden: true } }),
-    vscode.window.registerTreeDataProvider('noteWorkbench.notes', notes),
+    vscode.window.registerWebviewViewProvider('noteWorkbench.graph',graph,{webviewOptions:{retainContextWhenHidden:true}}),
+    vscode.commands.registerCommand('noteWorkbench.openGraph',()=>graph.open()),
     vscode.commands.registerCommand('noteWorkbench.openEditor', async (uri?: vscode.Uri) => {
       uri ??= vscode.window.activeTextEditor?.document.uri ?? provider.active?.document.uri;
       if (uri) await vscode.commands.executeCommand('vscode.openWith', uri, viewType);
     }),
     vscode.commands.registerCommand('noteWorkbench.openSource', async () => { const uri = provider.active?.document.uri ?? vscode.window.activeTextEditor?.document.uri; if (uri) await vscode.commands.executeCommand('vscode.openWith', uri, 'default'); }),
-    vscode.commands.registerCommand('noteWorkbench.rebuildIndex', () => notes.refresh()),
+    vscode.commands.registerCommand('noteWorkbench.rebuildIndex', () => graph.refresh()),
   );
 }

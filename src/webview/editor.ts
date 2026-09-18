@@ -6,16 +6,18 @@ import { editTable, markdownTable, htmlTables, type Table, type TableOperation }
 import { applyReplacements, minimalEdit } from '../shared/edits';
 import type { Snapshot } from '../shared/protocol';
 import { LiveSync } from '../shared/live-sync';
+import {BlockPreview} from './block-preview';
 import { normalizeSnapshot, hostEdits } from '../shared/line-endings';
 import {livePreview, renderedBlocks, previewMode, previewFocus} from './live-preview';
 import type {Block} from '../shared/render';
-import './live-preview.css';
 import {findHeading} from '../shared/anchors';
 import './editor.css';
 import './document.css';
+import './live-preview.css';
 
 declare function acquireVsCodeApi(): { postMessage(message: unknown): void; getState(): any; setState(value: unknown): void };
 const api = acquireVsCodeApi();
+const floatingPreview=new BlockPreview(message=>api.postMessage(message),body=>enhance(body));
 let snapshot: Snapshot | undefined;
 let editor: EditorView | undefined;
 const sync = new LiveSync();
@@ -203,52 +205,54 @@ function tableElement(table: Table, html: string): HTMLElement {
       td.addEventListener('focus', select); td.addEventListener('click', select);
       td.addEventListener('contextmenu', event => { if (!canEdit) return; event.preventDefault(); select(); menu.open = true; tools.querySelector('button')?.focus(); });
       if (canEdit) {
-        const edit = () => {
-          if (sync.conflict || td.querySelector('textarea')) return;
+        const edit = (point?:{x:number;y:number}) => {
+          if (sync.conflict || td.querySelector('.cell-editor')) return;
           flushCell?.();
-          const input = document.createElement('textarea'); input.value = table.rows[r].cells[c].raw.trim();
-          input.setAttribute('aria-label', `编辑第 ${r + 1} 行第 ${c + 1} 列`);
-          const originalHTML = td.innerHTML;
-          const originalValue = input.value;
-          let finished = false;
-          const updateCell = () => {
-            if (composingCell || sync.conflict || input.value === table.rows[r].cells[c].raw.trim()) return;
-            try {
-              const changes = editTable(tableSource, table, { kind:'setCell', row:r, column:c, text:input.value });
-              const next = applyReplacements(tableSource, changes), end = table.to + next.length - tableSource.length;
-              commit(changes);
-              tableSource = next;
-              table = table.format === 'markdown' ? markdownTable(next,table.from,end) : htmlTables(next,table.from,end)[0];
-            } catch (error) { info(String(error),true); }
+          const originalHTML=td.innerHTML,originalValue=table.rows[r].cells[c].raw.trim();
+          const host=document.createElement('div');host.className='cell-editor';td.replaceChildren(host);
+          let finished=false,cellView:EditorView;
+          const value=()=>cellView.state.doc.toString();
+          const updateCell=()=>{
+            if(composingCell||sync.conflict||finished||value()===table.rows[r].cells[c].raw.trim())return;
+            try{
+              const changes=editTable(tableSource,table,{kind:'setCell',row:r,column:c,text:value()});
+              const next=applyReplacements(tableSource,changes),end=table.to+next.length-tableSource.length;
+              cellRecovery={source:tableSource,replacements:changes};
+              commit(changes);tableSource=next;table=table.format==='markdown'?markdownTable(next,table.from,end):htmlTables(next,table.from,end)[0];remember();
+            }catch(error){info(String(error),true);}
           };
-          const finish = () => {
-            if (finished || composingCell) return;
-            updateCell();
-            finished = true; flushCell = undefined; cellRecovery = undefined;
-            if (input.value === originalValue) td.innerHTML = originalHTML;
-            else td.textContent = input.value;
-            // Refresh rich cell formatting after focus has moved out of the table.
-            setTimeout(() => { if (!wrapper.contains(document.activeElement) && snapshot?.source === sync.local) editor?.dispatch({effects:renderedBlocks.of(snapshot.blocks)}); },0);
+          const finish=()=>{
+            if(finished||composingCell)return;
+            updateCell();const text=value();finished=true;flushCell=undefined;cellRecovery=undefined;
+            cellView.destroy();
+            if(text===originalValue)td.innerHTML=originalHTML;else td.textContent=text;
+            setTimeout(()=>{if(!wrapper.contains(document.activeElement)&&snapshot?.source===sync.local)editor?.dispatch({effects:renderedBlocks.of(snapshot.blocks)});},0);
           };
-          flushCell = finish;
-          input.addEventListener('input', () => {
-            cellRecovery = { source: tableSource, replacements: editTable(tableSource, table, { kind: 'setCell', row: r, column: c, text: input.value }) };
-            updateCell();
-            remember();
-          });
-          input.addEventListener('compositionstart', () => { composingCell = true; });
-          input.addEventListener('compositionend', () => { composingCell = false; updateCell(); if (deferred) { const message=deferred; deferred=undefined; receive(message); } if (document.activeElement !== input) finish(); });
-          input.addEventListener('blur', finish);
-          input.addEventListener('keydown', event => {
-            if (event.isComposing) return;
-            if (event.key === 'Escape') { event.stopPropagation(); finish(); td.focus(); remember(); }
-            if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); finish(); editor?.focus(); }
-          });
-          td.replaceChildren(input); input.focus();
+          const move=(step:number)=>{
+            const columns=table.rows[0].cells.length,index=r*columns+c+step;
+            const target=grid.querySelectorAll<HTMLElement>('td:not(.row-handle),th:not(.row-handle):not(.column-handles th)')[index];
+            finish();if(target){target.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0}));}else editor?.focus();
+          };
+          cellView=new EditorView({parent:host,state:EditorState.create({doc:originalValue,extensions:[
+            markdown(),EditorView.lineWrapping,
+            livePreview(()=>document.createElement('span'),true),
+            EditorView.contentAttributes.of({'aria-label':`编辑第 ${r+1} 行第 ${c+1} 列`}),
+            keymap.of([{key:'Tab',run:()=>{move(1);return true;}},{key:'Shift-Tab',run:()=>{move(-1);return true;}},{key:'Escape',run:()=>{finish();td.focus();return true;}},{key:'Enter',run:()=>{move(table.rows[0].cells.length);return true;}},...defaultKeymap]),
+            EditorView.updateListener.of(update=>{if(update.docChanged)updateCell();}),
+            EditorView.domEventHandlers({
+              compositionstart:()=>{composingCell=true;},
+              compositionend:()=>{composingCell=false;setTimeout(()=>{updateCell();if(deferred){const message=deferred;deferred=undefined;receive(message);}},30);},
+              blur:()=>{setTimeout(()=>{if(!host.contains(document.activeElement))finish();},0);},
+            }),
+          ]})});
+          cellView.dispatch({effects:renderedBlocks.of([{from:0,to:originalValue.length,source:originalValue,kind:'paragraph',html:originalHTML}])});
+          flushCell=finish;cellView.focus();
+          if(point){const position=cellView.posAtCoords(point);if(position!==null)cellView.dispatch({selection:{anchor:position}});}
+
         };
         td.addEventListener('mousedown', event => {
-          if (event.button !== 0 || (event.target as Element).closest('textarea') || (event.ctrlKey || event.metaKey) && (event.target as Element).closest('a')) return;
-          event.preventDefault(); select(); edit();
+          if (event.button !== 0 || (event.target as Element).closest('.cell-editor') || (event.ctrlKey || event.metaKey) && (event.target as Element).closest('a')) return;
+          event.preventDefault(); select(); edit(event.isTrusted?{x:event.clientX,y:event.clientY}:undefined);
         });
         td.addEventListener('keydown', event => { if (event.target === td && event.key === 'Enter') { event.preventDefault(); edit(); } });
       }
@@ -311,6 +315,7 @@ function navigation() {
       flushCell?.(); sourceMode = !sourceMode;
       if (mode === 'read') { mode = 'edit'; render(); }
       editor?.dispatch({ effects:previewMode.of(!sourceMode) }); navigation(); editor?.focus();
+      floatingPreview.update(editor,!sourceMode);
     }),
     button('VS Code 源码', () => request('source')),
     button('保存', () => request('save'))
@@ -324,6 +329,7 @@ function navigation() {
 }
 function render() {
   if (!snapshot) return;
+  floatingPreview.hide();
   const scroll = window.scrollY;
   if(editor) savedSelection={anchor:editor.state.selection.main.anchor,head:editor.state.selection.main.head};
   flushCell?.(); editor?.destroy(); editor = undefined;
@@ -348,9 +354,11 @@ function render() {
           if (update.docChanged && !update.transactions.some(tr => tr.annotation(Transaction.remote))) {
             sync.local = update.state.doc.toString(); remember(); schedule();
           }
+          if(update.docChanged||update.selectionSet||update.focusChanged)floatingPreview.update(update.view,mode==='edit'&&!sourceMode);
         }),
         EditorView.domEventHandlers({
-          compositionend: () => { setTimeout(() => { if (deferred) { const message=deferred; deferred=undefined; receive(message); } schedule(); },30); },
+          blur:()=>{setTimeout(()=>{flush();floatingPreview.update(editor,false);},0);},
+          compositionend: () => { setTimeout(() => { if (deferred) { const message=deferred; deferred=undefined; receive(message); } schedule();floatingPreview.update(editor,mode==='edit'&&!sourceMode); },30); },
         }),
       ]}),
     });
@@ -391,7 +399,9 @@ function receive(message: Snapshot) {
 }
 window.addEventListener('message',event => {
   const message=event.data;
-  if (message?.type === 'snapshot') receive(message);
+  if(message?.type==='preview')floatingPreview.receive(message);
+  else if(message?.type==='settings'){floatingPreview.enabled=message.blockPreview;floatingPreview.update(editor,mode==='edit'&&!sourceMode);}
+  else if (message?.type === 'snapshot') receive(message);
   else if (message?.type === 'navigate' && typeof message.fragment === 'string') { if (snapshot) navigate(message.fragment); else pendingNavigation=message.fragment; }
   else if (message?.type === 'conflict' || message?.type === 'error') {
     sync.pending=undefined; sync.conflict=true; remember(); navigation();

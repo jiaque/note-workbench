@@ -19,6 +19,11 @@ export async function run() {
     await provider.resolveCustomTextEditor(document, fakePanel);
     incoming.fire({ type: 'ready' }); await waitFor(() => messages.some(m => m.type === 'snapshot'));
     const baseVersion = document.version;
+    assert.ok(messages.some(m=>m.type==='settings'&&m.blockPreview===true));
+    incoming.fire({type:'preview',requestId:7,source:'> [!note] Preview\n> **fresh**',from:0,to:100});
+    await waitFor(()=>messages.some(m=>m.type==='preview'&&m.requestId===7));
+    assert.match(messages.find(m=>m.type==='preview'&&m.requestId===7).html,/<strong>fresh<\/strong>/);
+    assert.equal(document.version,baseVersion,'Preview must not edit or save the real document');
     incoming.fire({ type: 'edit', baseVersion, operationId: 'edit-1', replacements: [{ from: 2, to: 10, expectedText: 'Original', insert: 'Changed' }] });
     await waitFor(() => messages.some(m => m.operationId === 'edit-1'));
     assert.match(document.getText(), /^# Changed/); assert.ok(document.isDirty);
