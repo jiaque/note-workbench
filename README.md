@@ -10,10 +10,10 @@
 
 ## 从 VS Code 扩展商店安装
 
-需要 VS Code **1.100.0 或更新版本**。日常使用无需安装 Node.js、npm 或 Obsidian。
+需要 VS Code **1.100.0 或更新版本**。
 
 1. 打开 VS Code，点击左侧的 **扩展** 图标，或按 `Ctrl+Shift+X`（macOS：`Cmd+Shift+X`）。
-2. 搜索 **Note Workbench**，选择发布者为 **jiaque** 的 **Note Workbench — Obsidian-style Editor**。也可以输入 `@id:jiaque.note-workbench` 精确查找。
+2. 搜索 **Note Workbench**，找到 **Note Workbench — Obsidian-style Editor**。也可以输入 `@id:jiaque.note-workbench` 精确查找。
 3. 点击 **安装**，按 VS Code 提示完成安装。
 4. 打开你的笔记文件夹，在资源管理器中右键一个 `.md` 文件，选择 **Note Workbench: 打开笔记编辑器**，即可开始实时预览编辑。
 
