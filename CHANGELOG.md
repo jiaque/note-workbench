@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1 — 2026-09-18
+
+- Show complete, uniformly styled source in active Markdown headings; render their heading and inline HTML styles in the floating preview and inactive headings.
+- Preserve existing paragraph and table cell formatting; restore heading rendering on blur.
+
 ## 0.4.0 — 2026-09-18
 
 - Add default-on live block preview overlay with shared rendering, stale-result protection and a VS Code setting.

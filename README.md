@@ -1,6 +1,6 @@
 # Note Workbench
 
-VS Code 独立笔记扩展，使用 TypeScript 开发。当前为 **0.4.0 开发预览，不是需求文档中的完整首版**。
+VS Code 独立笔记扩展，使用 TypeScript 开发。当前为 **0.4.1 开发预览，不是需求文档中的完整首版**。
 
 ## 本地运行
 
@@ -41,7 +41,7 @@ npm run build
 
 ```powershell
 npm run package
-# 输出 artifacts/note-workbench-0.4.0.vsix
+# 输出 artifacts/note-workbench-0.4.1.vsix
 ```
 
 在 VS Code 扩展面板的“…”菜单中选择“从 VSIX 安装”。打包使用临时 publisher `local-development`，未注册商店身份。不要以该身份公开发布；正式命名前需确定迁移策略。

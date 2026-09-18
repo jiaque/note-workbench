@@ -2,7 +2,7 @@
   "name": "note-workbench",
   "displayName": "Note Workbench (Development)",
   "description": "An independent Markdown and HTML notebook editor for VS Code. Local development preview.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publisher": "local-development",
   "private": true,
   "license": "UNLICENSED",

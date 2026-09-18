@@ -85,11 +85,16 @@ export function livePreview(createBlock: (block: Block, view: EditorView) => HTM
     const hide = (from: number, to: number) => { if (to > from) ranges.push(Decoration.replace({}).range(from, to)); };
     const mark = (from: number, to: number, cls: string) => { if (to > from) ranges.push(Decoration.mark({ class: cls }).range(from, to)); };
     const initial = liveParser(source), masked = maskComments(source, initial), tree = liveParser(masked);
+    // Active headings expose source only; other blocks and cells retain their existing formatting.
+    const sourceBlocks = inlineOnly ? [] : initial.children.filter((node:any) => {
+      const from=node.position.start.offset,to=node.position.end.offset;
+      return active(from,to) && node.type==='heading';
+    });
     for (let from = 0; from < source.length;) {
       if (source[from] === masked[from]) { from++; continue; }
       let to = from + 1;
       while (to < source.length && (source[to] !== masked[to] || /\s/.test(source[to]))) to++;
-      if (!active(from, to)) hide(from, to);
+      if (!active(from, to) && !sourceBlocks.some((node:any)=>node.position.start.offset<to&&node.position.end.offset>from)) hide(from, to);
       from = to;
     }
     let scope: HTMLTemplateElement | undefined;
@@ -161,6 +166,13 @@ export function livePreview(createBlock: (block: Block, view: EditorView) => HTM
       for (const child of children) walk(child);
     };
     for (const node of tree.children) {
+      if(sourceBlocks.some((sourceNode:any)=>sourceNode.position.start.offset<=node.position.start.offset&&sourceNode.position.end.offset>=node.position.end.offset)){
+        for(let pos=state.doc.lineAt(node.position.start.offset).from;pos<=node.position.end.offset;){
+          const line=state.doc.lineAt(pos);
+          ranges.push(Decoration.line({class:'live-source-line'}).range(line.from));pos=line.to+1;
+        }
+        continue;
+      }
       const block = blocks.find(b=>b.from===node.position.start.offset);
       scope = typeof document === 'undefined' ? undefined : document.createElement('template');
       if (scope) scope.innerHTML = block?.html ?? '';

@@ -34,7 +34,7 @@ test('CRLF host offsets and table ranges retain original newline bytes',()=>{
   assert.equal(applyReplacements(source,hostEdits(source,minimalEdit(normalized.source,desired))),desired.replace(/\n/g,'\r\n'));
   const table=normalized.tables[0];assert.equal(normalized.source.slice(table.from,table.to),source.slice(message.tables[0].from,message.tables[0].to).replace(/\r\n/g,'\n'));
 });
-test('live preview reveals only the selected formatting and preserves one source document',()=>{
+test('ordinary paragraphs retain inline formatting and restore rendering on blur',()=>{
   const source='## Heading\n\n**bold** and *emphasis*\n\nOther paragraph';
   let state=EditorState.create({doc:source,extensions:livePreview(()=>{throw Error('DOM is not used in state test');})});
   state=state.update({effects:renderedBlocks.of(renderDocument(source).blocks)}).state;
@@ -42,10 +42,28 @@ test('live preview reveals only the selected formatting and preserves one source
   assert.equal(decorations().filter(r=>r.value.spec.widget).length,3);
   state=state.update({selection:{anchor:source.indexOf('bold')+1},effects:previewFocus.of(true)}).state;
   const ranges=decorations();
+  assert.ok(!ranges.some(r=>r.value.spec.class==='live-source-line'));
   assert.ok(ranges.some(r=>r.value.spec.class==='live-strong'));
   assert.ok(!ranges.some(r=>r.from===source.indexOf('**') && r.to===source.indexOf('bold')));
   assert.ok(ranges.some(r=>r.from===source.indexOf('*emphasis*') && r.to===source.indexOf('emphasis')));
   assert.equal(state.doc.toString(),source);
+  state=state.update({effects:previewFocus.of(false)}).state;
+  assert.equal(decorations().filter(r=>r.value.spec.widget).length,3);
   state=state.update({changes:{from:source.indexOf('bold')+4,insert:'中文'}}).state;
   assert.ok(state.doc.toString().includes('bold中文'));
+});
+
+test('styled heading uses plain source while table cell formatting remains available',()=>{
+  const source='## <span style="background:red;color:white;display:block">**Title**</span>';
+  const read=(state:EditorState)=>state.facet(EditorView.decorations).flatMap(set=>{const specs:any[]=[];if(typeof set!=='function')set.between(0,state.doc.length,(_from,_to,value)=>{specs.push(value.spec);});return specs;});
+  let state=EditorState.create({doc:source,extensions:livePreview(()=>{throw Error('No DOM');})});
+  state=state.update({selection:{anchor:source.indexOf('Title')},effects:[renderedBlocks.of(renderDocument(source).blocks),previewFocus.of(true)]}).state;
+  assert.deepEqual(read(state).map(spec=>spec.class),['live-source-line']);
+  assert.equal(state.doc.toString(),source);
+  state=state.update({effects:previewFocus.of(false)}).state;
+  assert.equal(read(state).filter(spec=>spec.widget).length,1);
+  let cell=EditorState.create({doc:'**Title**',extensions:livePreview(()=>{throw Error('No DOM');},true)});
+  cell=cell.update({selection:{anchor:3},effects:previewFocus.of(true)}).state;
+  assert.ok(read(cell).some(spec=>spec.class==='live-strong'));
+  assert.ok(!read(cell).some(spec=>spec.class==='live-source-line'));
 });
