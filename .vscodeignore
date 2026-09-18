@@ -1,0 +1,16 @@
+src/**
+test/**
+scripts/**
+.vscode/**
+.vscode-test/**
+.npm-cache/**
+node_modules/**
+artifacts/**
+test-results/**
+dist/test/**
+dist/preview-render.*
+dist/**/*.map
+tsconfig.json
+package-lock.json
+.npmrc
+.gitignore

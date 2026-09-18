@@ -1,0 +1,8 @@
+{
+  "version": "0.2.0",
+  "configurations": [{
+    "name": "运行 Note Workbench", "type": "extensionHost", "request": "launch",
+    "args": ["--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/test/fixtures/vault"],
+    "outFiles": ["${workspaceFolder}/dist/**/*.cjs"], "preLaunchTask": "build"
+  }]
+}

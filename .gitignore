@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.npm-cache/
+.vscode-test/
+artifacts/
+*.vsix
+*.log
+.env
+.env.*
+!.env.example
+coverage/
+test-results/

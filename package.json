@@ -1,0 +1,124 @@
+{
+  "name": "note-workbench",
+  "displayName": "Note Workbench (Development)",
+  "description": "An independent Markdown and HTML notebook editor for VS Code. Local development preview.",
+  "version": "0.1.0",
+  "publisher": "local-development",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.100.0",
+    "node": ">=22"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "markdown",
+    "notes",
+    "table"
+  ],
+  "main": "./dist/extension.cjs",
+  "activationEvents": [],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": false
+  },
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "noteWorkbench.editor",
+        "displayName": "Note Workbench",
+        "selector": [
+          {
+            "filenamePattern": "*.md"
+          }
+        ],
+        "priority": "option"
+      }
+    ],
+    "commands": [
+      {
+        "command": "noteWorkbench.openEditor",
+        "title": "Note Workbench: 打开笔记编辑器"
+      },
+      {
+        "command": "noteWorkbench.openSource",
+        "title": "Note Workbench: 打开源码"
+      },
+      {
+        "command": "noteWorkbench.rebuildIndex",
+        "title": "Note Workbench: 刷新笔记列表"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "noteWorkbench.openEditor",
+          "when": "resourceExtname == .md",
+          "group": "navigation"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "noteWorkbench",
+          "title": "Note Workbench",
+          "icon": "media/notebook.svg"
+        }
+      ]
+    },
+    "views": {
+      "noteWorkbench": [
+        {
+          "id": "noteWorkbench.notes",
+          "name": "笔记"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "test:extension": "node scripts/test-extension.mjs",
+    "preview": "node scripts/preview.mjs",
+    "package": "npm run build && node scripts/licenses.mjs && vsce package --allow-missing-repository --no-rewrite-relative-links --skip-license --out artifacts/note-workbench-0.1.0.vsix",
+    "verify:package": "vsce ls --tree"
+  },
+  "dependencies": {
+    "@codemirror/commands": "6.11.1",
+    "@codemirror/lang-markdown": "6.5.2",
+    "@codemirror/state": "6.7.5",
+    "@codemirror/view": "6.43.12",
+    "mermaid": "12.0.0",
+    "parse5": "8.0.1",
+    "rehype-mathjax": "7.1.0",
+    "rehype-raw": "7.0.0",
+    "rehype-sanitize": "6.0.0",
+    "rehype-stringify": "10.0.1",
+    "remark-frontmatter": "5.0.0",
+    "remark-gfm": "4.0.1",
+    "remark-math": "6.0.0",
+    "remark-parse": "11.0.0",
+    "remark-rehype": "11.1.2",
+    "unified": "11.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.1",
+    "@types/vscode": "1.100.0",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "4.0.0",
+    "esbuild": "0.28.2",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2"
+  },
+  "overrides": {
+    "lodash-es": "4.18.1",
+    "@xmldom/xmldom": "0.9.12"
+  }
+}
