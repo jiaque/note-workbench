@@ -1,8 +1,9 @@
 {
   "name": "note-workbench",
   "displayName": "Note Workbench — Obsidian-style Editor",
+  "icon": "media/icon.png",
   "description": "Obsidian-style Markdown editing in VS Code with live preview, note graphs, editable tables, Markdown/HTML rendering and PDF export.",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "publisher": "jiaque",
   "author": "jiaque",
   "repository": {
@@ -152,6 +153,7 @@
     "dev": "node scripts/build.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts",
+    "test:caret": "node scripts/test-caret.mjs",
     "test:extension": "node scripts/test-extension.mjs",
     "preview": "node scripts/preview.mjs",
     "package": "npm run build && node scripts/licenses.mjs && vsce package --out artifacts/",

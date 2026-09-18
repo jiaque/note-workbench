@@ -29,7 +29,13 @@ export function livePreview(createBlock: (block: Block, view: EditorView) => HTM
       return this.block.html === other.block.html;
     }
     toDOM(view: EditorView) {
-      const element = this.inline ? document.createElement('span') : createBlock(this.block, view);
+      // CodeMirror measures the border box, not external/collapsed margins.
+      // Contain document spacing so hit testing matches the browser's layout.
+      const element: HTMLElement = document.createElement(this.inline ? 'span' : 'div');
+      if (!this.inline) {
+        element.className = 'live-widget';
+        element.append(createBlock(this.block, view));
+      }
       if (this.inline) { element.className = 'rendered live-inline'; element.innerHTML = this.block.html; }
       element.addEventListener('mousedown', event => {
         if ((event.target as Element).closest('button,input,textarea,summary,.table-card,audio,video,canvas')) return;

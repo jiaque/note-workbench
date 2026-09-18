@@ -1,10 +1,12 @@
 # Note Workbench — Obsidian-style Editor
 
+<img src="media/icon.png" alt="Note Workbench" width="96" height="96">
+
 在 VS Code 中使用 Obsidian 风格的实时编辑、笔记连接图与 Markdown/HTML 混排。支持块预览浮层和表格原位编辑，让笔记阅读、修改和关系浏览在同一个工作区完成。
 
 本项目为独立开发的 VS Code 扩展，非 Obsidian 官方产品，未获其官方背书；运行时无需安装 Obsidian 或 Obsidian Visualizer。Obsidian 名称及相关商标归其各自权利人所有。
 
-使用 TypeScript 开发，当前为 **0.5.2 开发预览，不是需求文档中的完整首版**。
+使用 TypeScript 开发，当前为 **0.5.3 开发预览，不是需求文档中的完整首版**。
 
 ## 本地运行
 

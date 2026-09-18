@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.3 — 2026-09-18
+
+- Add a dedicated note-and-graph icon for the extension listing.
+- Fix mouse caret placement and Up/Down navigation after rendered tables and callouts by including block margins in CodeMirror widget measurements.
+- Keep the active block editable while moving within it; retain existing heading, inline formatting and table editing behavior.
+- Add a real-browser regression for hit testing, repeated vertical movement and render acknowledgements (`npm run test:caret` after building).
+
 ## 0.5.2 — 2026-09-18
 
 - Correct the Marketplace publisher identifier to `jiaque`, as confirmed by the upload validation response. The extension ID is `jiaque.note-workbench`.
