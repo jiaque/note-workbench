@@ -45,74 +45,6 @@
     "configuration": {
       "title": "Note Workbench",
       "properties": {
-        "noteWorkbench.render.motion.enabled": {
-          "type": "boolean",
-          "default": true,
-          "scope": "resource",
-          "description": "%config.render.motion.enabled%"
-        },
-        "noteWorkbench.notes.newLocation": {
-          "type": "string",
-          "enum": [
-            "current",
-            "root",
-            "folder"
-          ],
-          "default": "current",
-          "scope": "resource",
-          "description": "%config.notes.newLocation%"
-        },
-        "noteWorkbench.notes.newFolder": {
-          "type": "string",
-          "default": "",
-          "scope": "resource",
-          "description": "%config.notes.newFolder%"
-        },
-        "noteWorkbench.render.remoteImages": {
-          "type": "boolean",
-          "default": true,
-          "scope": "resource",
-          "description": "%config.render.remoteImages%"
-        },
-        "noteWorkbench.pdf.browserPath": {
-          "type": "string",
-          "default": "",
-          "scope": "machine",
-          "restricted": true,
-          "description": "%config.pdf.browserPath%"
-        },
-        "noteWorkbench.styleSheets": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [],
-          "description": "%config.styleSheets%"
-        },
-        "noteWorkbench.editor.blockPreview.enabled": {
-          "type": "boolean",
-          "default": true,
-          "scope": "resource",
-          "description": "%config.editor.blockPreview.enabled%"
-        },
-        "noteWorkbench.graph.include": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [],
-          "description": "%config.graph.include%"
-        },
-        "noteWorkbench.graph.exclude": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [
-            "**/{node_modules,.git,.npm-cache}/**"
-          ],
-          "description": "%config.graph.exclude%"
-        },
         "noteWorkbench.language": {
           "type": "string",
           "enum": [
@@ -127,7 +59,85 @@
             "%language.zh%",
             "%language.en%"
           ],
-          "description": "%config.language%"
+          "description": "%config.language%",
+          "order": 10
+        },
+        "noteWorkbench.editor.blockPreview.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "%config.editor.blockPreview.enabled%",
+          "order": 20
+        },
+        "noteWorkbench.render.motion.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "%config.render.motion.enabled%",
+          "order": 30
+        },
+        "noteWorkbench.render.remoteImages": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "%config.render.remoteImages%",
+          "order": 40
+        },
+        "noteWorkbench.styleSheets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "%config.styleSheets%",
+          "order": 50
+        },
+        "noteWorkbench.notes.newLocation": {
+          "type": "string",
+          "enum": [
+            "current",
+            "root",
+            "folder"
+          ],
+          "default": "current",
+          "scope": "resource",
+          "description": "%config.notes.newLocation%",
+          "order": 60
+        },
+        "noteWorkbench.notes.newFolder": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "%config.notes.newFolder%",
+          "order": 70
+        },
+        "noteWorkbench.graph.include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "%config.graph.include%",
+          "order": 80
+        },
+        "noteWorkbench.graph.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/{node_modules,.git,.npm-cache}/**"
+          ],
+          "description": "%config.graph.exclude%",
+          "order": 90
+        },
+        "noteWorkbench.pdf.browserPath": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "restricted": true,
+          "description": "%config.pdf.browserPath%",
+          "order": 100
         }
       }
     },
