@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Prevent handled formatting and editor shortcuts from also triggering VS Code commands; retain host shortcuts outside the editor and unhandled modifier combinations.
+
 - Add document find in Live Preview, Reading and Source with Ctrl/Cmd+F, next/previous navigation, result counts, case matching and highlights.
 - Search full source in editing views and rendered text in Reading; reveal table matches and folded reading content without changing the document.
 - Keep search-input undo separate from document undo. Add literal/Unicode search tests and a real-browser regression (`npm run test:find`).

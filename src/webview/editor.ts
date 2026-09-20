@@ -1,5 +1,6 @@
 import {t} from '../shared/i18n';
 import {NoteFind,findDecorations} from './find';
+import {isolateEditorShortcuts,handleNoteShortcut} from './shortcuts';
 import { ChangeSet, EditorState, Transaction } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { defaultKeymap } from '@codemirror/commands';
@@ -50,6 +51,7 @@ let disposeMedia: (()=>void)[]=[];
 const root = document.getElementById('app')!;
 root.innerHTML = `<details class="document-menu"><summary aria-label="${t("笔记操作")}" title="${t("笔记操作")}">···</summary><nav aria-label="${t("笔记操作")}"></nav></details><div id="status" role="status" aria-live="polite"></div><main id="content"></main>`;
 const content = document.getElementById('content')!;
+isolateEditorShortcuts(content);
 const noteFind=new NoteFind(content,()=>editor,()=>{flushCell?.();flush();});
 const status = document.getElementById('status')!;
 const nav = root.querySelector('nav')!;
@@ -519,11 +521,10 @@ window.addEventListener('message',event => {
   }
 });
 document.addEventListener('keydown',event => {
-  if (event.isComposing || (!event.ctrlKey && !event.metaKey)) return;
-  const key=event.key.toLowerCase();
-  if (key === 's') { event.preventDefault(); request('save'); }
-  if (key === 'z' || key === 'y') { event.preventDefault(); request(event.shiftKey || key === 'y' ? 'redo' : 'undo'); }
-  if (key === 'e') { event.preventDefault(); flushCell?.(); flush(); mode=mode === 'edit' ? 'read' : 'edit'; render(); }
+  handleNoteShortcut(event,action=>{
+    if(action==='toggleView'){flushCell?.();flush();mode=mode==='edit'?'read':'edit';render();}
+    else request(action);
+  });
 },true);
 api.postMessage({type:'ready'});
 document.addEventListener('nw-layout',()=>editor?.requestMeasure());

@@ -23,4 +23,9 @@ export function format(view:EditorView,kind:Format):boolean{
   }
   view.focus();return true;
 }
-export const formattingKeys=keymap.of([{key:'Mod-b',run:view=>format(view,'bold')},{key:'Mod-i',run:view=>format(view,'italic')},{key:'Mod-k',run:view=>format(view,'link')},{key:'Mod-Shift-x',run:view=>format(view,'strike')}]);
+export const formattingKeys=keymap.of([
+  {key:'Mod-b',run:(view:EditorView)=>format(view,'bold')},
+  {key:'Mod-i',run:(view:EditorView)=>format(view,'italic')},
+  {key:'Mod-k',run:(view:EditorView)=>format(view,'link')},
+  {key:'Mod-Shift-x',run:(view:EditorView)=>format(view,'strike')},
+].map(binding=>({...binding,stopPropagation:true})));
