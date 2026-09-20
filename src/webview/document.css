@@ -24,3 +24,19 @@ main{max-width:1240px;padding:32px 54px 64px}
 .pdf-embed{display:block;height:auto;max-height:700px;overflow:auto;border:1px solid var(--line)}.pdf-controls{position:sticky;top:0;display:flex;align-items:center;justify-content:center;gap:16px;background:var(--bg);padding:6px}.pdf-embed canvas{display:block;max-width:100%;height:auto}
 .rendered a.tag{display:inline-block;background:color-mix(in srgb,var(--accent) 12%,transparent);padding:0 7px;border-radius:12px;font-size:.9em;color:var(--accent)}
 .rendered kbd{font-family:var(--vscode-editor-font-family,Consolas,monospace);font-size:.85em;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 5px;background:var(--soft)}.rendered li[data-task-mark]:has(>input:checked){color:var(--muted);text-decoration:line-through}.rendered li[data-task-mark]>ul,.rendered li[data-task-mark]>ol{color:var(--fg);text-decoration:none}
+/* Compact note actions, independent of document typography. */
+.document-menu nav{width:280px;max-width:calc(100vw - 24px);min-width:0;padding:10px;gap:2px;flex-wrap:nowrap;border-radius:10px;box-shadow:0 8px 28px #0002;font-size:14px;line-height:1.4}
+.document-menu nav hr{width:100%;border:0;border-top:1px solid var(--line);margin:7px 0}
+.document-menu .note-menu-modes{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--soft)}
+.document-menu .note-menu-modes button{flex:1;white-space:nowrap;text-align:center;border-radius:0;padding:8px 0;background:transparent;font-size:13px}
+.document-menu .note-menu-modes button+button{border-left:1px solid var(--line)}
+.document-menu .note-menu-modes button[aria-pressed=true]{background:color-mix(in srgb,var(--vscode-focusBorder,#1673e6) 12%,var(--bg));color:var(--vscode-focusBorder,#1673e6);font-weight:600}
+.document-menu .note-menu-row{display:flex;align-items:center;gap:12px;width:100%;min-height:34px;padding:7px 10px;white-space:nowrap;background:transparent}
+.document-menu .note-menu-row:hover,.document-menu .note-menu-row[aria-expanded=true]{background:var(--soft)}
+.document-menu .note-menu-row:disabled{opacity:.45;cursor:default}
+.document-menu .note-menu-row svg{flex-shrink:0}
+.document-menu .note-menu-trailing{margin-left:auto;color:var(--muted);font-size:12px}
+.document-menu .note-menu-motion{position:relative}
+.document-menu .note-menu-submenu{position:absolute;right:100%;top:0;width:155px;padding:6px;background:var(--bg);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px #0002}
+.document-menu .note-menu-submenu[hidden]{display:none}
+@media(max-width:480px),(max-height:450px){.document-menu nav{max-height:calc(100dvh - 52px);overflow-y:auto}.document-menu .note-menu-submenu{position:static;width:100%;box-shadow:none;margin:3px 0}.document-menu .note-menu-row[aria-expanded=true] .note-menu-trailing{transform:rotate(-90deg)}}

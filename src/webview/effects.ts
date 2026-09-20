@@ -21,6 +21,7 @@ function update(i:Instance){
 }
 export function setMotion(value:boolean){enabled=value;document.documentElement.classList.toggle('nw-motion-off',!enabled||paused||reduced.matches);instances.forEach(update);}
 export function toggleMotion(){paused=!paused;setMotion(enabled);return paused;}
+export function isMotionPaused(){return paused;}
 export function replaySvg(){for(const i of instances.values())if(i.image){i.node.setAttribute('src',i.image.still);requestAnimationFrame(()=>update(i));}}
 reduced.addEventListener('change',()=>setMotion(enabled));document.addEventListener('visibilitychange',()=>instances.forEach(update));
 function themedSvg(source:string,node:HTMLElement){

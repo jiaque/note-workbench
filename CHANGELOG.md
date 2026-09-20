@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.6 — 2026-09-20
+
+- Replace the long document menu with a compact view switcher and grouped actions.
+- Remove formatting buttons from the menu while retaining formatting shortcuts.
+- Group motion pause/resume and SVG replay in a submenu, with keyboard navigation and an inline layout in narrow windows.
+- Preserve property visibility, table insertion, PDF export, save and conflict recovery actions.
+
 ## 0.5.5 — 2026-09-20
 
 - Add 34 opt-in motion presets with typed inline parameters; motion is enabled by default and can be disabled live in settings.

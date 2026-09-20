@@ -13,9 +13,10 @@ import type {Block} from '../shared/render';
 import {findHeading} from '../shared/anchors';
 import {blankLinesBetween} from '../shared/block-spacing';
 import {wikiCompletion} from './wiki-completion';
-import {format,formats,formattingKeys} from './formatting';
+import {formattingKeys} from './formatting';
+import {createElement, Table2, Tag, FileDown, Play, Pause, RotateCcw, Code2, Save, ChevronLeft, Square, SquareCheck, type IconNode} from 'lucide';
 import {loadMermaid} from './mermaid';
-import {enhanceEffects,setMotion,toggleMotion,replaySvg} from './effects';
+import {enhanceEffects,setMotion,toggleMotion,isMotionPaused,replaySvg} from './effects';
 import './editor.css';
 import './document.css';
 import './live-preview.css';
@@ -80,6 +81,14 @@ function navigate(fragment: string) {
 }
 document.addEventListener('pointerdown', event => {
   for (const menu of document.querySelectorAll<HTMLDetailsElement>('.table-menu[open],.document-menu[open]')) if (!menu.contains(event.target as Node)) menu.open = false;
+});
+nav.addEventListener('keydown',event=>{
+  if(event.key==='Escape'){event.preventDefault();const menu=nav.parentElement as HTMLDetailsElement;menu.open=false;menu.querySelector<HTMLElement>('summary')?.focus();}
+  if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+    const items=[...nav.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')].filter(item=>item.getClientRects().length);
+    const index=items.indexOf(document.activeElement as HTMLButtonElement);
+    event.preventDefault();items[(index+(event.key==='ArrowDown'?1:items.length-1))%items.length]?.focus();
+  }
 });
 content.addEventListener('click', event => {
   const link = (event.target as Element).closest('a');
@@ -359,29 +368,50 @@ function blockElement(block: Block, view?: EditorView): HTMLElement {
   return section;
 }
 function navigation() {
-  nav.replaceChildren(
-    button(mode === 'edit' ? '阅读视图' : '实时预览', () => { flushCell?.(); flush(); mode = mode === 'edit' ? 'read' : 'edit'; render(); }),
-    button(sourceMode ? '实时预览' : '源码模式', () => {
-      flushCell?.(); sourceMode = !sourceMode;
-      if (mode === 'read') { mode = 'edit'; render(); }
-      editor?.dispatch({ effects:previewMode.of(!sourceMode) }); navigation(); editor?.focus();
-      floatingPreview.update(editor,!sourceMode);
-    }),
-    button('VS Code 源码', () => request('source')),
-    button('保存', () => request('save'))
-  );
-  nav.append(button('导出 PDF',()=>request('exportPdf')));
-  nav.append(button('暂停/恢复当前笔记动效',()=>info(toggleMotion()?'动效已暂停':'动效已恢复')),button('重新播放 SVG',replaySvg));
-  if(mode==='edit'&&!snapshot?.readonly&&!sync.conflict){
-    const formatting=document.createElement('details');const summary=document.createElement('summary');summary.textContent='格式';formatting.append(summary);
-    for(const [kind,label]of formats)formatting.append(button(label,()=>{const view=EditorView.findFromDOM(document.activeElement as HTMLElement)??editor;if(view)format(view,kind);}));
-    nav.append(formatting,button('插入表格',insertTable));
+  const menu=root.querySelector<HTMLDetailsElement>('.document-menu')!;
+  const close=()=>{menu.open=false;};
+  const icon=(shape:IconNode)=>createElement(shape,{'aria-hidden':'true',width:18,height:18,'stroke-width':1.7});
+  const row=(label:string,shape:IconNode,action:()=>void)=>{
+    const item=button(label,()=>{close();action();},'note-menu-row');item.prepend(icon(shape));return item;
+  };
+  const divider=()=>document.createElement('hr');
+  const modes=document.createElement('div');modes.className='note-menu-modes';modes.setAttribute('role','group');modes.setAttribute('aria-label','笔记视图');
+  for(const [value,label] of [['live','实时预览'],['read','阅读'],['source','源码']] as const){
+    const item=button(label,()=>{
+      flushCell?.();flush();close();const previousMode=mode;mode=value==='read'?'read':'edit';sourceMode=value==='source';
+      if(previousMode==='edit'&&mode==='edit'&&editor){editor.dispatch({effects:previewMode.of(!sourceMode)});navigation();floatingPreview.update(editor,!sourceMode);}
+      else render();
+      if(mode==='edit')editor?.focus();
+    });
+    item.setAttribute('aria-pressed',String(value===(mode==='read'?'read':sourceMode?'source':'live')));modes.append(item);
   }
-  nav.append(button(showProperties?'隐藏属性':'显示属性',()=>{
+  const insert=row('插入表格',Table2,()=>{if(mode==='read'){mode='edit';sourceMode=false;render();}insertTable();});
+  insert.disabled=!!snapshot?.readonly||sync.conflict;
+  const properties=row('显示属性',Tag,()=>{
     showProperties=!showProperties;
     if(mode==='read') render();
     else {content.classList.toggle('hide-properties',!showProperties);editor?.requestMeasure();navigation();}
-  }));
+  });
+  properties.setAttribute('aria-pressed',String(showProperties));
+  const check=icon(showProperties?SquareCheck:Square);check.classList.add('note-menu-trailing');properties.append(check);
+  const motion=document.createElement('div');motion.className='note-menu-motion';
+  const trigger=button('动效控制',()=>setSubmenu(true),'note-menu-row');trigger.prepend(icon(Play));
+  trigger.setAttribute('aria-expanded','false');trigger.setAttribute('aria-controls','note-motion-actions');
+  const arrow=icon(ChevronLeft);arrow.classList.add('note-menu-trailing');trigger.append(arrow);
+  const submenu=document.createElement('div');submenu.id='note-motion-actions';submenu.className='note-menu-submenu';submenu.hidden=true;
+  submenu.append(row(isMotionPaused()?'恢复动效':'暂停动效',isMotionPaused()?Play:Pause,()=>{info(toggleMotion()?'动效已暂停':'动效已恢复');navigation();}),row('重播 SVG',RotateCcw,replaySvg));
+  function setSubmenu(open:boolean){submenu.hidden=!open;trigger.setAttribute('aria-expanded',String(open));}
+  motion.append(trigger,submenu);
+  motion.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse')setSubmenu(true);});
+  motion.addEventListener('pointerleave',()=>{if(!motion.contains(document.activeElement))setSubmenu(false);});
+  motion.addEventListener('focusout',event=>{if(!motion.contains(event.relatedTarget as Node))setSubmenu(false);});
+  motion.addEventListener('keydown',event=>{
+    if(event.key==='ArrowLeft'){event.preventDefault();setSubmenu(true);submenu.querySelector('button')?.focus();}
+    if(event.key==='ArrowRight'||(event.key==='Escape'&&!submenu.hidden)){event.preventDefault();event.stopPropagation();trigger.focus();setSubmenu(false);}
+  });
+  const save=row('保存',Save,()=>request('save'));
+  const shortcut=document.createElement('span');shortcut.className='note-menu-trailing';shortcut.textContent='Ctrl+S';save.append(shortcut);
+  nav.replaceChildren(modes,divider(),insert,properties,row('导出 PDF',FileDown,()=>request('exportPdf')),divider(),motion,row('在 VS Code 中编辑',Code2,()=>request('source')),divider(),save);
   if (sync.conflict) nav.append(button('对比冲突内容',()=>api.postMessage({type:'compare',source:sync.local})),button('另存本地草稿',()=>api.postMessage({type:'recover',source:sync.local})),button('采用外部版本',()=>{if(!confirm('采用外部版本将放弃当前未同步草稿。请先对比或另存草稿。'))return;sync.pending=undefined;sync.conflict=false;sync.local=sync.source;cellRecovery=undefined;remember();render();info('已载入外部版本。');}),button('复制保留的编辑内容', () => { void navigator.clipboard.writeText(sync.local); }));
 }
 function insertTable(){
