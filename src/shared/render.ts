@@ -14,18 +14,22 @@ import { refractor } from 'refractor/all';
 import { Pencil, ClipboardList, Info, CircleCheck, Flame, Check, CircleHelp, TriangleAlert, X, Zap, Bug, List, Quote } from 'lucide';
 import { parseDocument } from 'yaml';
 import { AllPackages } from 'mathjax-full/js/input/tex/AllPackages.js';
+import {cleanStyle} from './css-styles';
+import {effectAttributes} from './effects';
+import {isolateSvg} from './svg-image';
 
 export interface Block { from: number; to: number; kind: string; html: string; source: string }
 export interface Rendered { blocks: Block[]; tables: Table[]; classes?: string[] }
 const parser = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ['yaml']).use(remarkMath).use(obsidianSyntax);
 const createRenderer = () => unified().use(remarkRehype, { allowDangerousHtml: true, footnoteLabel: '脚注' }).use(rehypeRaw)
+  .use(() => (tree: any) => isolateSvg(tree))
   .use(() => (tree: any) => filterStyles(tree))
   .use(rehypeSanitize, {
     ...defaultSchema,
-    protocols: { ...defaultSchema.protocols, href: [...(defaultSchema.protocols?.href ?? []), 'file', 'nw-note', 'nw-tag', 'obsidian'] },
+    protocols: { ...defaultSchema.protocols, src:[...(defaultSchema.protocols?.src??[]),'data'], href: [...(defaultSchema.protocols?.href ?? []), 'file', 'nw-note', 'nw-tag', 'obsidian'] },
     tagNames: [...defaultSchema.tagNames!, 'colgroup', 'col', 'details', 'summary', 'mark', 'sub', 'sup', 'u', 'abbr', 'figure', 'figcaption', 'audio', 'video', 'source', 'svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'tspan', 'title', 'desc'],
     attributes: { ...defaultSchema.attributes,
-      '*': [...(defaultSchema.attributes!['*'] ?? []), 'style', 'className', 'dataNwBlock', 'dataHeading', 'dataNoteTarget', 'dataEmbed', 'dataWidth', 'dataHeight', 'dataVaultImage', 'dataTaskOffset', 'dataTaskMark'],
+      '*': [...(defaultSchema.attributes!['*'] ?? []), 'style', 'className', 'dataNwBlock', 'dataHeading', 'dataNoteTarget', 'dataEmbed', 'dataWidth', 'dataHeight', 'dataVaultImage', 'dataTaskOffset', 'dataTaskMark',...Object.keys(effectAttributes),'dataNwRepeat','dataNwSvgStatic'],
       code: [['className', /^language-./, 'math-inline', 'math-display']], details: ['open'],
       col:['span','width'],colgroup:['span'],
       audio:['src','controls','loop','muted','preload'],video:['src','controls','loop','muted','preload','poster','width','height'],source:['src','type'],
@@ -60,11 +64,9 @@ function filterStyles(node: any) {
   if (node.properties) {
     if (node.tagName === 'a' && /^[a-z]:[\\/]/i.test(String(node.properties.href ?? ''))) node.properties.href = 'file:///' + node.properties.href.replace(/\\/g, '/');
     const style = node.properties.style;
-    if (typeof style === 'string') node.properties.style = style.split(';').filter((rule: string) => {
-      const colon = rule.indexOf(':');
-      const key = rule.slice(0, colon).trim().toLowerCase(), value = rule.slice(colon + 1).trim();
-      return colon > 0 && allowedStyles.has(key) && (/^[\p{L}\p{N}_\s#.,%+\-"']+$/u.test(value)||/^(?:rgb|rgba|hsl|hsla)\([\d\s.,%+\-]+\)$/i.test(value)) && !/url|expression|import|javascript/i.test(value);
-    }).join(';');
+    if (typeof style === 'string') node.properties.style = cleanStyle(style);
+    for(const [key,values] of Object.entries(effectAttributes))if(node.properties[key]!==undefined&&!values.includes(node.properties[key]))delete node.properties[key];
+    if(node.properties.dataNwRepeat!==undefined&&!/^(infinite|[1-9]\d{0,2})$/.test(node.properties.dataNwRepeat))delete node.properties.dataNwRepeat;
     // Static SVG only; never allow external paint servers or resource references.
     for (const key of ['fill', 'stroke']) if (/url\s*\(/i.test(String(node.properties[key] ?? ''))) delete node.properties[key];
   }

@@ -22,7 +22,7 @@ test('foldable callouts retain rich title, body, nesting and default state', () 
 test('mixed HTML preserves visual styles, SVG geometry and safe anchor ids', () => {
   const html = renderDocument('<a id="section"></a>\n\n## <span style="background-color:#953734;color:white;padding:4px 10px;display:block;position:fixed;background-image:url(https://bad.test)">Title</span>\n\n<svg viewBox="0 0 100 40"><text x="2" y="20" font-size="14">Chart</text><path d="M0 0L10 10" stroke="#333"/></svg>').blocks.map(b => b.html).join('');
   assert.match(html, /background-color:#953734/); assert.doesNotMatch(html, /position:fixed|bad.test/);
-  assert.match(html, /id="user-content-section"/); assert.match(html, /viewBox="0 0 100 40"/); assert.match(html, /font-size="14"/); assert.match(html, /<path/);
+  assert.match(html, /id="user-content-section"/); const svg=decodeURIComponent(html.match(/src="data:image\/svg\+xml;charset=utf-8,([^"]+)"/)![1]);assert.doesNotMatch(html,/<svg/);assert.match(svg, /viewBox="0 0 100 40"/); assert.match(svg, /font-size="14"/); assert.match(svg, /<path/);
 });
 
 test('SVG active content and external references remain blocked', () => {

@@ -21,9 +21,9 @@
 
 ## 2. 架构决策
 
-### 待确认设计：HTML/CSS 动效与折叠统一
+### 0.5.5：HTML/CSS 动效与隔离 SVG
 
-详见 [HTML/CSS 动效、动态 SVG 与折叠样式设计](css-motion-design.md)。拟通过 `data-nw-*` 和内联参数提供 34 个动效预设，并统一 HTML details 与 Markdown Callout 的折叠样式。新增动态 SVG 采用“原文可编辑、过滤后图片隔离”的方案，支持自动播放的图表与操作指引，不执行笔记脚本或提供图内交互。本节仅记录设计入口，不代表当前版本已支持。
+详见 [HTML/CSS 动效、动态 SVG 与折叠样式设计](css-motion-design.md)及[实现记录](motion-implementation.md)。通过 `data-nw-*` 和内联参数提供 34 个动效预设，并统一 HTML details 与 Markdown Callout 的折叠样式。动态 SVG 采用“原文可编辑、过滤后图片隔离”的方案，支持自动播放的图表与操作指引，不执行笔记脚本或提供图内交互。`render.motion.enabled` 默认开启、实时生效；CSS 解析与 SVG 过滤位于 shared，浏览器效果和静态导出共用 effects 模块。
 
 ### 首版补齐（0.5.4，2026-09-20）
 

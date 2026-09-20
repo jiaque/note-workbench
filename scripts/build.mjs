@@ -23,6 +23,8 @@ const jobs = [
   { entryPoints: ['test/extension/suite.ts'], outfile: 'dist/test/suite.cjs', bundle: true, platform: 'node', format: 'cjs', target: 'node20', external: ['vscode'], sourcemap: true, define },
   { entryPoints: ['src/shared/preview.ts'], outfile: 'dist/preview-render.cjs', bundle: true, platform: 'node', format: 'cjs', target: 'node22', define },
 ];
+// The browser distribution embeds grammar data and avoids import.meta/createRequire in CJS bundles.
+for(const job of jobs)job.alias={'css-tree':resolve('node_modules/css-tree/dist/csstree.esm.js')};
 if (process.argv.includes('--watch')) {
   for (const job of jobs) { const ctx = await context(job); await ctx.watch(); }
   console.log('Watching extension and webview sources.');

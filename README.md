@@ -6,7 +6,28 @@
 
 本项目为独立开发的 VS Code 扩展，非 Obsidian 官方产品，未获其官方背书；运行时无需安装 Obsidian 或 Obsidian Visualizer。Obsidian 名称及相关商标归其各自权利人所有。
 
-使用 TypeScript 开发，当前为 **0.5.4 开发预览，不是需求文档中的完整首版**。
+使用 TypeScript 开发，当前为 **0.5.5 开发预览，不是需求文档中的完整首版**。
+
+## CSS 动效与动态 SVG
+
+在设置中搜索 `noteWorkbench.render.motion.enabled`，可开启或关闭动效，**默认开启**，同时遵循系统的减少动态效果偏好，修改立即生效。普通文档不会自动添加动效；使用 `data-nw-effect` 显式启用。
+
+```html
+<div data-nw-effect="breathe" data-nw-hover="lift"
+     style="--nw-duration:2s;--nw-color:#2563eb;padding:16px;border-radius:8px;">
+  呼吸光晕，悬停上浮
+</div>
+
+<div data-nw-effect="progress-striped" style="--nw-progress:65%;--nw-color:#22c55e;">
+  已完成 65%
+</div>
+```
+
+提供呼吸、流光、入场、悬停、进度和等待等 34 个预设。笔记菜单可暂停/恢复动效和重播 SVG；关闭动效时仍显示正文及正确进度。
+
+支持直接手写 SVG，并在点击后编辑源码、通过浮层查看结果。SVG 经受限过滤后按独立图片显示，支持 CSS 关键帧及声明式动画，不执行笔记脚本、不提供图内鼠标交互。本地 `.svg` 图片引用使用同样的过滤链路。PDF 输出静态基础态；作者应保证基础态可读。
+
+完整参数与范围见[动效设计](docs/css-motion-design.md)，实际验证及限制见[0.5.5 实现记录](docs/motion-implementation.md)。示例文件：[Effects.md](test/fixtures/vault/Effects.md)。
 
 ## 从 VS Code 扩展商店安装
 

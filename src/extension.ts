@@ -43,8 +43,8 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
       try{const file=await realpath(path.resolve(vaultRoot,relativePath)),relative=path.relative(vaultRoot,file);if(relative.startsWith('..')||path.isAbsolute(relative)||path.extname(file).toLowerCase()!=='.css')continue;styleSheets.push(vscode.Uri.file(file));}catch{/* Missing custom styles do not prevent opening a note. */}
     }
     panel.webview.html = this.html(panel.webview,styleSheets,vscode.workspace.getConfiguration('noteWorkbench',document.uri).get('render.remoteImages',true));
-    const sendSettings=()=>panel.webview.postMessage({type:'settings',blockPreview:vscode.workspace.getConfiguration('noteWorkbench',document.uri).get('editor.blockPreview.enabled',true)});
-    const config=vscode.workspace.onDidChangeConfiguration(event=>{if(event.affectsConfiguration('noteWorkbench.editor.blockPreview.enabled',document.uri))void sendSettings();});
+    const sendSettings=()=>panel.webview.postMessage({type:'settings',blockPreview:vscode.workspace.getConfiguration('noteWorkbench',document.uri).get('editor.blockPreview.enabled',true),motionEnabled:vscode.workspace.getConfiguration('noteWorkbench',document.uri).get('render.motion.enabled',true)});
+    const config=vscode.workspace.onDidChangeConfiguration(event=>{if(event.affectsConfiguration('noteWorkbench',document.uri))void sendSettings();});
     let disposed = false, renderRequest = 0, acknowledgedOperation: string | undefined;
     const sendSnapshot = async (operationId?: string) => {
       if (disposed) return;
@@ -204,7 +204,8 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
     const resolved=await realpath(target.fsPath), relative=path.relative(root,resolved);
     if (relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('目标文件不在当前笔记库内');
     const extension=path.extname(target.fsPath).toLowerCase();
-    const source=extension==='.md'?(await vscode.workspace.openTextDocument(target)).getText():extension==='.canvas'?Buffer.from(await vscode.workspace.fs.readFile(target)).toString('utf8'):undefined;
+    if(extension==='.svg'&&(await vscode.workspace.fs.stat(target)).size>500000)throw new Error('SVG 文件超过 500KB');
+    const source=extension==='.md'?(await vscode.workspace.openTextDocument(target)).getText():['.canvas','.svg'].includes(extension)?Buffer.from(await vscode.workspace.fs.readFile(target)).toString('utf8'):undefined;
     return {id:target.with({fragment}).toString(), url:(webview?webview.asWebviewUri(target):target).with({fragment}).toString(), source, extension};
   }
 

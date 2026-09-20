@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.5 — 2026-09-20
+
+- Add 34 opt-in motion presets with typed inline parameters; motion is enabled by default and can be disabled live in settings.
+- Respect reduced-motion preferences and provide note-level pause/resume and SVG replay controls.
+- Filter author SVG into isolated images, retaining editable source and CSS/SMIL animations; provide static image variants for disabled motion and PDF.
+- Share disclosure styling and preserve open/closed state across Live Preview and reading mode.
+- Parse CSS declarations structurally and keep existing table layout and document editing behavior.
+
 ## 0.5.4 — 2026-09-20
 
 - Register Note Workbench as a default editor candidate for Markdown; existing user editor associations retain precedence.

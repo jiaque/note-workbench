@@ -24,6 +24,10 @@ export async function run() {
     incoming.fire({ type: 'ready' }); await waitFor(() => messages.some(m => m.type === 'snapshot'));
     const baseVersion = document.version;
     assert.ok(messages.some(m=>m.type==='settings'&&m.blockPreview===true));
+    assert.ok(messages.some(m=>m.type==='settings'&&m.motionEnabled===true),'Motion is enabled by default');
+    const motionConfig=vscode.workspace.getConfiguration('noteWorkbench'),oldMotion=motionConfig.inspect<boolean>('render.motion.enabled')?.globalValue;
+    try{await motionConfig.update('render.motion.enabled',false,vscode.ConfigurationTarget.Global);await waitFor(()=>messages.some(m=>m.type==='settings'&&m.motionEnabled===false));}
+    finally{await motionConfig.update('render.motion.enabled',oldMotion,vscode.ConfigurationTarget.Global);}
     incoming.fire({type:'preview',requestId:7,source:'> [!note] Preview\n> **fresh**',from:0,to:100});
     await waitFor(()=>messages.some(m=>m.type==='preview'&&m.requestId===7));
     assert.match(messages.find(m=>m.type==='preview'&&m.requestId===7).html,/<strong>fresh<\/strong>/);

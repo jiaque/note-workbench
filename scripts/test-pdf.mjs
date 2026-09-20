@@ -18,3 +18,5 @@ const abort=new AbortController();abort.abort();
 await assert.rejects(pdf.exportPdf({...options,signal:abort.signal}),/取消/);
 await assert.rejects(pdf.exportPdf({...options,source:'![缺失图片](does-not-exist.png)'}),/图片加载失败/);
 console.log('PASS PDF images, HTML table, cancellation and missing-image failure');
+await writeFile('test-results/pdf/effects.pdf',await pdf.exportPdf({...options,source:await readFile(resolve(vault,'Effects.md'),'utf8'),title:'动效静态导出'}));
+console.log('PASS PDF motion sample: progress, disclosures and isolated SVG');

@@ -15,6 +15,7 @@ import {blankLinesBetween} from '../shared/block-spacing';
 import {wikiCompletion} from './wiki-completion';
 import {format,formats,formattingKeys} from './formatting';
 import {loadMermaid} from './mermaid';
+import {enhanceEffects,setMotion,toggleMotion,replaySvg} from './effects';
 import './editor.css';
 import './document.css';
 import './live-preview.css';
@@ -313,10 +314,12 @@ function tableElement(table: Table, html: string): HTMLElement {
     wrapper.append(addRow, addColumn);
   }
   wrapper.addEventListener('keydown', event => { if (event.key === 'Escape') { menu.open = false; menuToggle.focus(); } });
+  queueMicrotask(()=>enhance(wrapper));
   return wrapper;
 }
 
 function enhance(body: HTMLElement) {
+  enhanceEffects(body,false,body.closest('.block-preview')?'':body.dataset.nwIdentity??'');
   const epoch = renderEpoch;
     for (const code of body.querySelectorAll<HTMLElement>('code.language-mermaid')) {
       const source = code.textContent ?? '';
@@ -343,6 +346,7 @@ function blockElement(block: Block, view?: EditorView): HTMLElement {
   if (isolated && !tables[0].reason) return tableElement(tables[0],block.html);
   const section = document.createElement('section'); section.className = 'note-block live-block';
   const body = document.createElement('div'); body.className = 'rendered'; body.innerHTML = block.html; section.append(body);
+  body.dataset.nwIdentity=String(block.from)+':'+block.source;
   for (const task of body.querySelectorAll<HTMLInputElement>('li[data-task-offset] > input[type="checkbox"],li[data-task-offset] > p > input[type="checkbox"]')) {
     const item = task.closest<HTMLElement>('[data-task-offset]')!, offset = Number(item.dataset.taskOffset);
     task.disabled = !!snapshot?.readonly; task.setAttribute('aria-label',item.textContent?.trim() || '任务');
@@ -367,6 +371,7 @@ function navigation() {
     button('保存', () => request('save'))
   );
   nav.append(button('导出 PDF',()=>request('exportPdf')));
+  nav.append(button('暂停/恢复当前笔记动效',()=>info(toggleMotion()?'动效已暂停':'动效已恢复')),button('重新播放 SVG',replaySvg));
   if(mode==='edit'&&!snapshot?.readonly&&!sync.conflict){
     const formatting=document.createElement('details');const summary=document.createElement('summary');summary.textContent='格式';formatting.append(summary);
     for(const [kind,label]of formats)formatting.append(button(label,()=>{const view=EditorView.findFromDOM(document.activeElement as HTMLElement)??editor;if(view)format(view,kind);}));
@@ -468,7 +473,7 @@ window.addEventListener('message',event => {
   if(message?.type==='preview')floatingPreview.receive(message);
   else if(message?.type==='requestExportPdf')request('exportPdf');
   else if(message?.type==='navigateOffset'&&Number.isInteger(message.offset))navigateOffset(message.offset);
-  else if(message?.type==='settings'){floatingPreview.enabled=message.blockPreview;floatingPreview.update(editor,mode==='edit'&&!sourceMode);}
+  else if(message?.type==='settings'){setMotion(message.motionEnabled!==false);floatingPreview.enabled=message.blockPreview;floatingPreview.update(editor,mode==='edit'&&!sourceMode);}
   else if (message?.type === 'snapshot') receive(message);
   else if (message?.type === 'navigate' && typeof message.fragment === 'string') { if (snapshot) navigate(message.fragment); else pendingNavigation=message.fragment; }
   else if (message?.type === 'conflict' || message?.type === 'error') {
@@ -484,3 +489,4 @@ document.addEventListener('keydown',event => {
   if (key === 'e') { event.preventDefault(); flushCell?.(); flush(); mode=mode === 'edit' ? 'read' : 'edit'; render(); }
 },true);
 api.postMessage({type:'ready'});
+document.addEventListener('nw-layout',()=>editor?.requestMeasure());

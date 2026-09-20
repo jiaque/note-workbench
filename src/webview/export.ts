@@ -1,7 +1,9 @@
 import './export.css';
 import {loadMermaid} from './mermaid';
+import {enhanceEffects} from './effects';
 declare global{interface Window{__notePdfState?:{ready?:boolean;error?:string}}}
 async function prepare(){
+  enhanceEffects(document.body,true);
   for(const details of document.querySelectorAll('details'))details.open=true;
   const diagrams=[...document.querySelectorAll<HTMLElement>('code.language-mermaid')];
   if(diagrams.length){const mermaid=await loadMermaid();

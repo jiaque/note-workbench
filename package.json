@@ -3,7 +3,7 @@
   "displayName": "Note Workbench — Obsidian-style Editor",
   "icon": "media/icon.png",
   "description": "Obsidian-style Markdown editing in VS Code with live preview, note graphs, editable tables, Markdown/HTML rendering and PDF export.",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "publisher": "jiaque",
   "author": "jiaque",
   "repository": {
@@ -45,6 +45,12 @@
     "configuration": {
       "title": "Note Workbench",
       "properties": {
+        "noteWorkbench.render.motion.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "启用 CSS 动效和动态 SVG（默认开启，并尊重系统减少动态效果偏好）。关闭后保留静态内容和进度值；修改立即生效。"
+        },
         "noteWorkbench.notes.newLocation": {
           "type": "string",
           "enum": [
@@ -177,6 +183,7 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts",
     "test:caret": "node scripts/test-caret.mjs",
+    "test:motion": "node scripts/test-motion.mjs",
     "test:extension": "node scripts/test-extension.mjs",
     "preview": "node scripts/preview.mjs",
     "package": "npm run build && node scripts/licenses.mjs && vsce package --out artifacts/",
@@ -189,7 +196,9 @@
     "@codemirror/state": "6.7.5",
     "@codemirror/view": "6.43.12",
     "@mermaid-js/mermaid-zenuml": "1.0.1",
+    "css-tree": "3.2.1",
     "d3-force": "3.0.0",
+    "hast-util-to-html": "9.0.5",
     "lucide": "0.577.0",
     "mermaid": "12.0.0",
     "parse5": "8.0.1",
@@ -208,6 +217,7 @@
     "yaml": "2.9.1"
   },
   "devDependencies": {
+    "@types/css-tree": "3.2.0",
     "@types/d3-force": "3.0.10",
     "@types/node": "26.6.1",
     "@types/vscode": "1.100.0",

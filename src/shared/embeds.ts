@@ -1,6 +1,7 @@
 import { parseFragment, serialize } from 'parse5';
 import { renderDocument, type Rendered } from './render';
 import {findHeading} from './anchors';
+import {svgImage} from './svg-image';
 
 export interface Resource { id: string; url: string; source?: string; extension: string }
 export type ResourceResolver = (origin: string, target: string) => Promise<Resource>;
@@ -24,7 +25,7 @@ export async function hydrateResources(rendered: Rendered, origin: string, resol
     if (['img','audio','video','source'].includes(node.tagName)) {
       const src = attr(node,'src');
       if (src && !/^(?:https?:|data:)/i.test(src)) {
-        try { set(node,'src',(await resolve(origin, attr(node,'data-vault-image') ?? src)).url); }
+        try {const resource=await resolve(origin, attr(node,'data-vault-image') ?? src);if(node.tagName==='img'&&resource.extension==='.svg'&&resource.source!==undefined){const image=svgImage(resource.source);set(node,'src',image.src);set(node,'data-nw-svg-static',image.staticSrc);}else set(node,'src',resource.url); }
         catch { set(node,'alt','图片缺失：' + (attr(node,'alt') || src)); }
       }
     }
