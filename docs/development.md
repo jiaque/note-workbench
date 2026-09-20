@@ -23,7 +23,7 @@
 
 ### 待确认设计：HTML/CSS 动效与折叠统一
 
-详见 [HTML/CSS 动效与折叠样式设计](css-motion-design.md)。拟通过 `data-nw-*` 和内联参数提供 34 个动效预设，并统一 HTML details 与 Markdown Callout 的折叠样式。本节仅记录设计入口，不代表当前版本已支持。
+详见 [HTML/CSS 动效、动态 SVG 与折叠样式设计](css-motion-design.md)。拟通过 `data-nw-*` 和内联参数提供 34 个动效预设，并统一 HTML details 与 Markdown Callout 的折叠样式。新增动态 SVG 采用“原文可编辑、过滤后图片隔离”的方案，支持自动播放的图表与操作指引，不执行笔记脚本或提供图内交互。本节仅记录设计入口，不代表当前版本已支持。
 
 ### 首版补齐（0.5.4，2026-09-20）
 
