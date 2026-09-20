@@ -12,6 +12,13 @@ export function t(key:keyof typeof english,values:Record<string,string|number>={
   return text.replace(/\{(\w+)\}/g,(match,name)=>Object.hasOwn(values,name)?String(values[name]):match);
 }
 export const english = {
+  '文章内查找':'Find in note',
+  '在文章中查找':'Find in note',
+  '区分大小写':'Match case',
+  '上一个结果':'Previous match',
+  '下一个结果':'Next match',
+  '关闭查找':'Close find',
+  '无结果':'No results',
   '笔记操作':'Note actions',
   '笔记视图':'Note view',
   '实时预览':'Live Preview',

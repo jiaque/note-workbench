@@ -80,6 +80,7 @@ The **⋯** menu contains view switching, table insertion, properties, PDF expor
 | --- | --- |
 | Save | `Ctrl/Cmd+S`; also respects VS Code Auto Save |
 | Switch editing/reading | `Ctrl/Cmd+E` |
+| Find in the current note | `Ctrl/Cmd+F`; `Enter` / `Shift+Enter` or `F3` / `Shift+F3` for next/previous; `Esc` to close |
 | Bold / italic | `Ctrl/Cmd+B` / `Ctrl/Cmd+I` |
 | Link / strikethrough | `Ctrl/Cmd+K` / `Ctrl/Cmd+Shift+X` |
 | Next / previous table cell | `Tab` / `Shift+Tab` |
@@ -91,6 +92,8 @@ The **⋯** menu contains view switching, table insertion, properties, PDF expor
 Leaving an edited block syncs changes to the VS Code document. Writing to disk follows Auto Save or explicit saving. External conflicts expose compare, draft recovery and external-version actions in the note menu.
 
 Use ordinary Markdown syntax for headings, quotes, inline code and lists; more one-step formatting shortcuts are deferred. Missing-note links offer a creation choice before creating a file.
+
+Find supports case matching, result counts and highlighting in all three views. Live Preview and Source search the full Markdown source, including syntax; Reading searches rendered text and unfolds matching content. Switching views retains the query but can change the result count. Search does not modify the note.
 
 ## Settings
 

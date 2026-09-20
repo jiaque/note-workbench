@@ -1,0 +1,37 @@
+import {EditorState} from '@codemirror/state';
+import {EditorView} from '@codemirror/view';
+import {NoteFind,findDecorations} from '../src/webview/find';
+import {setLanguage} from '../src/shared/i18n';
+import '../src/webview/editor.css';
+setLanguage('en');
+const content=document.querySelector('main')!,output=document.querySelector('output')!;
+let editor:EditorView|undefined;
+const finder=new NoteFind(content,()=>editor,()=>{});
+const input=finder.panel.querySelector('input')!;
+const status=()=>finder.panel.querySelector('[role=status]')!.textContent;
+const check=(ok:unknown,message:string)=>{if(!ok)throw Error(message);};
+const frame=()=>new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
+const search=(text:string)=>{input.value=text;input.dispatchEvent(new Event('input',{bubbles:true}));};
+const key=(value:string,options:KeyboardEventInit={})=>input.dispatchEvent(new KeyboardEvent('keydown',{key:value,bubbles:true,cancelable:true,...options}));
+try {
+  const source='😀 First needle\n'+Array.from({length:300},(_,i)=>`Line ${i}`).join('\n')+'\nLast NEEDLE';
+  editor=new EditorView({parent:content,state:EditorState.create({doc:source,extensions:[findDecorations]})});
+  key('f',{ctrlKey:true});search('needle');
+  check(status()==='1 / 2','full document matches, including offscreen text');
+  key('Enter');await frame();await frame();
+  check(editor.state.selection.main.from===source.lastIndexOf('NEEDLE'),'next match selects offscreen text');
+  key('Enter');check(status()==='1 / 2','wrap forward');key('Enter',{shiftKey:true});check(status()==='2 / 2','wrap backward');
+  check(editor.state.doc.toString()===source,'search must not change the document');
+  finder.panel.querySelector<HTMLButtonElement>('[aria-label="Match case"]')!.click();check(status()==='1 / 1','case sensitivity');
+  finder.panel.querySelector<HTMLButtonElement>('[aria-label="Match case"]')!.click();
+  editor.dispatch({changes:{from:0,to:source.length,insert:'needle'}});finder.changed();await frame();await frame();check(status()==='1 / 1','refresh after edits');
+  key('f',{ctrlKey:true});key('Escape');check(finder.panel.hidden,'repeated open then escape');check(content.querySelectorAll('.note-find-match').length===0,'close removes decorations');
+  editor.destroy();editor=undefined;
+  content.innerHTML='<p>first <strong>needle</strong></p><details><summary>Folded</summary><p>hidden needle</p></details><button>needle</button><p>last NEEDLE</p>';
+  finder.open();search('needle');check(status()==='1 / 3','reading text excludes controls');key('Enter');check(content.querySelector('details')!.open,'reading search unfolds destination');
+  search('first needle');check(status()==='1 / 1','reading search crosses inline markup');
+  search('missing');check(status()==='No results','empty result');
+  search('needle');finder.close();
+  check((CSS as any).highlights.get('note-find')===undefined,'close removes reading highlights');
+  output.textContent='PASS: full-document source search, next/previous/wrap, case, editing refresh, unchanged source, repeated open/close, reading, folded content and inline markup.';
+}catch(error){output.textContent='FAIL: '+String(error);console.error(error);}

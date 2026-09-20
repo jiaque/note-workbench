@@ -1,4 +1,5 @@
 import {t} from '../shared/i18n';
+import {NoteFind,findDecorations} from './find';
 import { ChangeSet, EditorState, Transaction } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { defaultKeymap } from '@codemirror/commands';
@@ -49,6 +50,7 @@ let disposeMedia: (()=>void)[]=[];
 const root = document.getElementById('app')!;
 root.innerHTML = `<details class="document-menu"><summary aria-label="${t("笔记操作")}" title="${t("笔记操作")}">···</summary><nav aria-label="${t("笔记操作")}"></nav></details><div id="status" role="status" aria-live="polite"></div><main id="content"></main>`;
 const content = document.getElementById('content')!;
+const noteFind=new NoteFind(content,()=>editor,()=>{flushCell?.();flush();});
 const status = document.getElementById('status')!;
 const nav = root.querySelector('nav')!;
 const button = (label: string, onClick: () => void, className = '') => { const node = document.createElement('button'); node.type = 'button'; node.textContent = label; node.className = className; node.addEventListener('click', onClick); return node; };
@@ -248,9 +250,12 @@ function tableElement(table: Table, html: string): HTMLElement {
       const spacer=document.createElement('span');spacer.style.cssText='display:inline-block;width:20px;height:0';gutter.append(spacer);
       gutter.setAttribute('aria-hidden','true');tr.append(gutter);
     }
+    let findCellOffset=row.from;
     row.cells.forEach((cell, c) => {
       const td = document.createElement(cell.tag === 'th' || (table.format === 'markdown' && r === 0) ? 'th' : 'td');
       td.dataset.cellRow=String(r);td.dataset.cellColumn=String(c);
+      const findFrom=table.format==='markdown'?tableSource.indexOf(cell.raw,findCellOffset):cell.from;
+      if(findFrom>=0){td.dataset.findFrom=String(findFrom);td.dataset.findTo=String(table.format==='markdown'?findFrom+cell.raw.length:cell.to);findCellOffset=findFrom+cell.raw.length;}
       const renderedCell = renderedRows[r]?.cells[c];
       if (renderedCell) { td.innerHTML = renderedCell.innerHTML; for(const attribute of renderedCell.attributes)td.setAttribute(attribute.name,attribute.value); }
       else td.textContent = cell.raw.trim();
@@ -438,7 +443,7 @@ function render() {
     editor = new EditorView({
       parent:content,
       state:EditorState.create({doc:sync.local,selection:{anchor:Math.min(savedSelection.anchor,sync.local.length),head:Math.min(savedSelection.head,sync.local.length)},extensions:[
-        markdown(), formattingKeys,wikiCompletion(message=>api.postMessage(message)),keymap.of([
+        markdown(), findDecorations, formattingKeys,wikiCompletion(message=>api.postMessage(message)),keymap.of([
           ...(['Home','End'] as const).map(key=>({key,run:(view:EditorView)=>{const line=view.state.doc.lineAt(view.state.selection.main.head);view.dispatch({selection:{anchor:key==='Home'?line.from:line.to},scrollIntoView:true});return true;},shift:(view:EditorView)=>{const selection=view.state.selection.main,line=view.state.doc.lineAt(selection.head);view.dispatch({selection:{anchor:selection.anchor,head:key==='Home'?line.from:line.to},scrollIntoView:true});return true;}})),
           ...defaultKeymap,
         ]), EditorView.lineWrapping,
@@ -450,6 +455,7 @@ function render() {
             sync.local = update.state.doc.toString(); remember(); schedule();
           }
           if(update.docChanged||update.selectionSet||update.focusChanged)floatingPreview.update(update.view,mode==='edit'&&!sourceMode);
+          if(update.docChanged)noteFind.changed();
         }),
         EditorView.domEventHandlers({
           blur:()=>{setTimeout(()=>{flush();floatingPreview.update(editor,false);},0);},

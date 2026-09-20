@@ -80,6 +80,7 @@ code --install-extension jiaque.note-workbench
 | --- | --- |
 | 保存 | `Ctrl/Cmd+S`；同时遵循 VS Code 自动保存设置 |
 | 切换编辑／阅读 | `Ctrl/Cmd+E` |
+| 文章内查找 | `Ctrl/Cmd+F`；`Enter`／`Shift+Enter` 或 `F3`／`Shift+F3` 切换下一个／上一个；`Esc` 关闭 |
 | 加粗／斜体 | `Ctrl/Cmd+B`／`Ctrl/Cmd+I` |
 | 链接／删除线 | `Ctrl/Cmd+K`／`Ctrl/Cmd+Shift+X` |
 | 表格下一格／上一格 | `Tab`／`Shift+Tab` |
@@ -89,6 +90,8 @@ code --install-extension jiaque.note-workbench
 | 补全笔记／标题／块 | `[[`、`[[笔记#` 或 `[[笔记#^` |
 
 离开编辑块后，修改同步到 VS Code 文本文档；磁盘保存由自动保存或手动保存决定。外部修改冲突时，笔记菜单提供对比、草稿恢复和采用外部版本等操作。
+
+三种视图均支持查找、结果计数、高亮和区分大小写。实时预览与源码视图搜索完整 Markdown 源码（包含语法）；阅读视图搜索渲染文字，自动展开命中的折叠内容。切换视图保留搜索词，但结果数量可能变化。查找操作不会修改正文。
 
 标题、引用、行内代码和列表可以输入常规 Markdown 语法，更多一键格式快捷操作暂缓。缺失链接会先提供创建选项，再新建笔记。
 
