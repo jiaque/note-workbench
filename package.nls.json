@@ -1,0 +1,22 @@
+{
+  "extension.description": "Obsidian-style Markdown editing in VS Code with live preview, note graphs, editable tables, Markdown/HTML rendering and PDF export.",
+  "config.render.motion.enabled": "Enable CSS effects and animated SVG. Enabled by default; respects reduced-motion preferences. Disabling retains static content and progress values. Changes apply immediately.",
+  "config.notes.newLocation": "Folder for missing notes: current note folder, vault root, or custom folder. Explicit paths in links take precedence.",
+  "config.notes.newFolder": "Custom folder for new notes, relative to the current vault root.",
+  "config.render.remoteImages": "Allow HTTPS remote images. Disable to allow only vault and data images. Applies to editing, reading, previews and PDF. Reopen the note after changing.",
+  "config.pdf.browserPath": "Edge / Chrome executable for PDF export. Leave empty to detect an installed browser; npm is not required.",
+  "config.styleSheets": "Vault-relative CSS paths, applied in order. Use with YAML cssclasses to customize notes. Reopen the note after changing.",
+  "config.editor.blockPreview.enabled": "Show a rendered preview above the non-table block being edited. Leaving the block syncs edits to the document; disk saving follows VS Code Auto Save or Ctrl+S.",
+  "config.graph.include": "File globs to include in the graph. Leave empty to include all Markdown notes in the vault.",
+  "config.graph.exclude": "File globs to exclude from the graph.",
+  "language.auto": "Follow VS Code display language (default)",
+  "language.zh": "Simplified Chinese",
+  "language.en": "English",
+  "config.language": "Interface language for Note Workbench. Auto follows VS Code; Chinese locales use Simplified Chinese and other locales use English. Reload Window after changing. Settings descriptions and command titles always follow VS Code.",
+  "command.exportPdf": "Note Workbench: Export PDF",
+  "command.openEditor": "Note Workbench: Open Note Editor",
+  "command.openSource": "Note Workbench: Open Source",
+  "command.rebuildIndex": "Note Workbench: Refresh Graph",
+  "command.openGraph": "Note Workbench: Open Graph",
+  "view.graph": "Graph"
+}

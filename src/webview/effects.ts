@@ -1,3 +1,4 @@
+import {t} from '../shared/i18n';
 import {effects,entrances,hovers} from '../shared/effects';
 import './effects.css';
 type Instance={node:HTMLElement;animations:Animation[];visible:boolean;triggered:boolean;hovered:boolean;cleanup:()=>void;image?:{live:string;still:string;rawLive?:string;rawStill?:string};enter?:Animation;hover?:Animation};
@@ -70,7 +71,7 @@ export function enhanceEffects(root:HTMLElement,staticMode=false,identity=''){
     };
     const conflicts=!!node.style.transform||!!node.style.translate||!!node.style.rotate||!!node.style.scale;
     const movement=new Set(['pulse','float','spin','swing','bounce','shake']);
-    if(conflicts&&(movement.has(effect)||['lift','zoom','tilt'].includes(hover)))node.title='已保留原有变换，停用冲突的位置动效。';
+    if(conflicts&&(movement.has(effect)||['lift','zoom','tilt'].includes(hover)))node.title=t("已保留原有变换，停用冲突的位置动效。");
     if(['breathe','glow','shine','gradient-flow','border-flow','ripple','highlight','skeleton'].includes(effect)){
       const layer=make('nw-overlay');layer.style.borderRadius='inherit';
       if(effect==='breathe'||effect==='glow'){layer.style.boxShadow=`0 0 ${glow} ${color}`;run(layer,[{opacity:.1},{opacity:Math.max(.1,Number(get('intensity','.3')))},{opacity:.1}]);}
@@ -86,7 +87,7 @@ export function enhanceEffects(root:HTMLElement,staticMode=false,identity=''){
     }
     if(['progress','progress-striped','progress-ring','loading-bar','loading-dots','spinner'].includes(effect)){
       const progress=parseFloat(get('progress','0%')),track=make('nw-track');track.style.setProperty('--nw-resolved-color',color);
-      if(effect.startsWith('progress')){track.setAttribute('role','progressbar');track.removeAttribute('aria-hidden');track.setAttribute('aria-label',node.textContent?.trim()||'进度');track.setAttribute('aria-valuemin','0');track.setAttribute('aria-valuemax','100');track.setAttribute('aria-valuenow',String(progress));}
+      if(effect.startsWith('progress')){track.setAttribute('role','progressbar');track.removeAttribute('aria-hidden');track.setAttribute('aria-label',node.textContent?.trim()||t("进度"));track.setAttribute('aria-valuemin','0');track.setAttribute('aria-valuemax','100');track.setAttribute('aria-valuenow',String(progress));}
       if(effect==='progress-ring'||effect==='spinner'){
         track.className+=' nw-ring';track.style.setProperty('--nw-ring-progress',progress+'%');track.style.background=`conic-gradient(${color} ${effect==='spinner'?'25%':'var(--nw-ring-progress)'},${get('track-color','#dce2ea')} 0)`;
         if(effect==='spinner')run(track,[{transform:'rotate(0)'},{transform:'rotate(360deg)'}],1200);

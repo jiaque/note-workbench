@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.7 — 2026-09-20
+
+- Add `noteWorkbench.language`: follow VS Code by default, or choose Simplified Chinese / English. Reload Window applies changes.
+- Localize note and table menus, live block previews, graph controls, PDF UI and extension messages without changing authored content.
+- Localize manifest descriptions, settings and command titles using VS Code's display language.
+- Adapt motion submenu width to English labels and test locale precedence, placeholder parity and content preservation.
+
 ## 0.5.6 — 2026-09-20
 
 - Replace the long document menu with a compact view switcher and grouped actions.

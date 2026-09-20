@@ -2,8 +2,8 @@
   "name": "note-workbench",
   "displayName": "Note Workbench — Obsidian-style Editor",
   "icon": "media/icon.png",
-  "description": "Obsidian-style Markdown editing in VS Code with live preview, note graphs, editable tables, Markdown/HTML rendering and PDF export.",
-  "version": "0.5.6",
+  "description": "%extension.description%",
+  "version": "0.5.7",
   "publisher": "jiaque",
   "author": "jiaque",
   "repository": {
@@ -49,7 +49,7 @@
           "type": "boolean",
           "default": true,
           "scope": "resource",
-          "description": "启用 CSS 动效和动态 SVG（默认开启，并尊重系统减少动态效果偏好）。关闭后保留静态内容和进度值；修改立即生效。"
+          "description": "%config.render.motion.enabled%"
         },
         "noteWorkbench.notes.newLocation": {
           "type": "string",
@@ -60,26 +60,26 @@
           ],
           "default": "current",
           "scope": "resource",
-          "description": "缺失笔记的创建目录：current 为当前笔记目录，root 为工作区根目录，folder 使用自定义目录。链接中明确指定路径时优先使用链接路径。"
+          "description": "%config.notes.newLocation%"
         },
         "noteWorkbench.notes.newFolder": {
           "type": "string",
           "default": "",
           "scope": "resource",
-          "description": "新笔记自定义目录，相对于当前笔记库根目录。"
+          "description": "%config.notes.newFolder%"
         },
         "noteWorkbench.render.remoteImages": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
-          "description": "允许加载 HTTPS 远程图片；关闭后仅允许笔记库内及 data 图片。适用于编辑、阅读、浮层和 PDF。修改后重新打开笔记生效。"
+          "description": "%config.render.remoteImages%"
         },
         "noteWorkbench.pdf.browserPath": {
           "type": "string",
           "default": "",
           "scope": "machine",
           "restricted": true,
-          "description": "PDF 导出使用的 Edge / Chrome 可执行文件路径。留空自动检测本机浏览器，无需安装 npm。"
+          "description": "%config.pdf.browserPath%"
         },
         "noteWorkbench.styleSheets": {
           "type": "array",
@@ -87,13 +87,13 @@
             "type": "string"
           },
           "default": [],
-          "description": "笔记库内的 CSS 文件相对路径，按顺序应用到笔记视图。配合 YAML cssclasses 自定义展示。修改后重新打开笔记。"
+          "description": "%config.styleSheets%"
         },
         "noteWorkbench.editor.blockPreview.enabled": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
-          "description": "编辑非表格块时，在其上方显示实时渲染浮层。离开后修改同步到文档，磁盘保存遵循 VS Code Auto Save 或 Ctrl+S。"
+          "description": "%config.editor.blockPreview.enabled%"
         },
         "noteWorkbench.graph.include": {
           "type": "array",
@@ -101,7 +101,7 @@
             "type": "string"
           },
           "default": [],
-          "description": "连接图包含的文件 glob；留空包含笔记库内全部 Markdown。"
+          "description": "%config.graph.include%"
         },
         "noteWorkbench.graph.exclude": {
           "type": "array",
@@ -111,7 +111,23 @@
           "default": [
             "**/{node_modules,.git,.npm-cache}/**"
           ],
-          "description": "连接图排除的文件 glob。"
+          "description": "%config.graph.exclude%"
+        },
+        "noteWorkbench.language": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "zh-CN",
+            "en"
+          ],
+          "default": "auto",
+          "scope": "window",
+          "enumDescriptions": [
+            "%language.auto%",
+            "%language.zh%",
+            "%language.en%"
+          ],
+          "description": "%config.language%"
         }
       }
     },
@@ -130,23 +146,23 @@
     "commands": [
       {
         "command": "noteWorkbench.exportPdf",
-        "title": "Note Workbench: 导出 PDF"
+        "title": "%command.exportPdf%"
       },
       {
         "command": "noteWorkbench.openEditor",
-        "title": "Note Workbench: 打开笔记编辑器"
+        "title": "%command.openEditor%"
       },
       {
         "command": "noteWorkbench.openSource",
-        "title": "Note Workbench: 打开源码"
+        "title": "%command.openSource%"
       },
       {
         "command": "noteWorkbench.rebuildIndex",
-        "title": "Note Workbench: 刷新连接图"
+        "title": "%command.rebuildIndex%"
       },
       {
         "command": "noteWorkbench.openGraph",
-        "title": "Note Workbench: 打开连接图"
+        "title": "%command.openGraph%"
       }
     ],
     "menus": {
@@ -172,7 +188,7 @@
         {
           "type": "webview",
           "id": "noteWorkbench.graph",
-          "name": "连接图"
+          "name": "%view.graph%"
         }
       ]
     }

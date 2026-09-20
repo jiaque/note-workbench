@@ -3,7 +3,8 @@ import { readFile, realpath, readdir } from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import { resolve, extname, dirname, relative, isAbsolute } from 'node:path';
 import renderer from '../dist/preview-render.cjs';
-const { renderDocument, hydrateResources, buildGraph,wikiCompletions } = renderer;
+const { renderDocument, hydrateResources, buildGraph,wikiCompletions, setLanguage, resolveLanguage } = renderer;
+const previewLanguage=resolveLanguage(process.env.NOTE_WORKBENCH_PREVIEW_LANGUAGE||'zh-CN');setLanguage(previewLanguage);
 let graphLayout={};
 const root = resolve('dist/webview');
 const sourceFile=resolve(process.env.NOTE_WORKBENCH_PREVIEW_FILE || 'test/fixtures/vault/Welcome.md'), vault=dirname(sourceFile);
@@ -25,7 +26,7 @@ const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url, 'http://127.0.0.1');
     if(url.pathname==='/graph'){
-      response.setHeader('Content-Type','text/html; charset=utf-8');response.end(`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><link rel="stylesheet" href="/graph.css"><body><div id="graph-app"></div><script>window.acquireVsCodeApi=()=>({postMessage:async m=>{const r=await fetch('/graph-message',{method:'POST',body:JSON.stringify(m)});for(const result of await r.json())window.postMessage(result,'*')}})</script><script src="/graph.js"></script></body></html>`);return;
+      response.setHeader('Content-Type','text/html; charset=utf-8');response.end(`<!doctype html><html lang="${previewLanguage}"><meta charset="utf-8"><link rel="stylesheet" href="/graph.css"><body><div id="graph-app"></div><script>window.acquireVsCodeApi=()=>({postMessage:async m=>{const r=await fetch('/graph-message',{method:'POST',body:JSON.stringify(m)});for(const result of await r.json())window.postMessage(result,'*')}})</script><script src="/graph.js"></script></body></html>`);return;
     }
     if(url.pathname==='/graph-message'){
       let body='';for await(const chunk of request)body+=chunk;const message=JSON.parse(body),output=[];
@@ -48,7 +49,7 @@ const server = createServer(async (request, response) => {
     }
     if (url.pathname === '/') {
       response.setHeader('Content-Type', 'text/html; charset=utf-8');
-      response.end(`<!doctype html><html lang="zh-CN"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Note Workbench · Development</title><link rel="stylesheet" href="/editor.css"><body><div id="app"></div><script>let state;window.acquireVsCodeApi=()=>({getState:()=>state,setState:s=>state=s,postMessage:async message=>{const response=await fetch('/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(message)});for(const m of await response.json())window.postMessage(m,'*')}});</script><script type="module" src="/editor.js"></script></body></html>`); return;
+      response.end(`<!doctype html><html lang="${previewLanguage}"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Note Workbench · Development</title><link rel="stylesheet" href="/editor.css"><body><div id="app"></div><script>let state;window.acquireVsCodeApi=()=>({getState:()=>state,setState:s=>state=s,postMessage:async message=>{const response=await fetch('/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(message)});for(const m of await response.json())window.postMessage(m,'*')}});</script><script type="module" src="/editor.js"></script></body></html>`); return;
     }
     if (url.pathname === '/message' && request.method === 'POST') {
       let body = ''; for await (const chunk of request) { body += chunk; if (body.length > 2_000_000) throw new Error('Request too large'); }

@@ -1,3 +1,4 @@
+import {t} from '../shared/i18n';
 import type {EditorView} from '@codemirror/view';
 import {liveParser} from './live-preview';
 
@@ -20,10 +21,10 @@ export class BlockPreview {
   private from=0;
   enabled=true;
   constructor(private send:(message:unknown)=>void,private enhance:(body:HTMLElement)=>void) {
-    this.box.className='block-preview';this.box.hidden=true;this.box.setAttribute('aria-label','当前块实时预览');
+    this.box.className='block-preview';this.box.hidden=true;this.box.setAttribute('aria-label',t("当前块实时预览"));
     const header=document.createElement('header');header.className='block-preview-header';
-    const title=document.createElement('span');title.textContent='实时预览';
-    const close=document.createElement('button');close.textContent='×';close.setAttribute('aria-label','关闭当前预览');
+    const title=document.createElement('span');title.textContent=t("实时预览");
+    const close=document.createElement('button');close.textContent='×';close.setAttribute('aria-label',t("关闭当前预览"));
     close.onclick=()=>{this.dismissed=this.key;this.hide();};
     header.append(title,this.label,close);this.body.className='rendered block-preview-body';this.box.append(header,this.body);document.body.append(this.box);
     this.box.addEventListener('mousedown',event=>event.preventDefault());
@@ -42,13 +43,13 @@ export class BlockPreview {
     if(this.dismissed===key)return;
     if(this.key!==key){this.dismissed='';this.body.replaceChildren();}
     this.key=key;this.from=block.from;
-    this.box.hidden=false;this.label.textContent='更新中…';this.position();
+    this.box.hidden=false;this.label.textContent=t("更新中…");this.position();
     clearTimeout(this.timer);const requestId=++this.requestId;
     this.timer=setTimeout(()=>this.send({type:'preview',requestId,source,from:block.from,to:block.to}),130);
   }
   receive(message:any){
     if(message.requestId!==this.requestId || this.box.hidden)return;
-    this.body.innerHTML=message.html;this.label.textContent=message.error?'暂未渲染':'已更新';
+    this.body.innerHTML=message.html;this.label.textContent=message.error?t("暂未渲染"):t("已更新");
     this.enhance(this.body);requestAnimationFrame(()=>this.position());
   }
   private position(){

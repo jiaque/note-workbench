@@ -1,3 +1,4 @@
+import {getLanguage} from '../shared/i18n';
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {randomBytes} from 'node:crypto';
@@ -14,7 +15,7 @@ export interface PdfOptions{
   browserPath?:string;signal?:AbortSignal;remoteImages?:boolean;
 }
 export function pdfHtml(title:string,body:string,classes:string[]=[],styles:string[]=[],remoteImages=true){
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none';script-src 'self';style-src 'self' 'unsafe-inline';img-src 'self' data: ${remoteImages?'https:':''};font-src 'self' data:;connect-src 'self';"><title>${escape(title)}</title><link rel="stylesheet" href="assets/editor.css">${styles.map(href=>`<link rel="stylesheet" href="${escape(href)}">`).join('')}<link rel="stylesheet" href="assets/export.css"></head><body><main class="rendered ${classes.map(escape).join(' ')}">${body}</main><script type="module" src="assets/export.js"></script></body></html>`;
+  return `<!doctype html><html lang="${getLanguage()}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none';script-src 'self';style-src 'self' 'unsafe-inline';img-src 'self' data: ${remoteImages?'https:':''};font-src 'self' data:;connect-src 'self';"><title>${escape(title)}</title><link rel="stylesheet" href="assets/editor.css">${styles.map(href=>`<link rel="stylesheet" href="${escape(href)}">`).join('')}<link rel="stylesheet" href="assets/export.css"></head><body><main class="rendered ${classes.map(escape).join(' ')}">${body}</main><script type="module" src="assets/export.js"></script></body></html>`;
 }
 export async function exportPdf(options:PdfOptions):Promise<Buffer>{
   const browser=await findBrowser(options.browserPath);

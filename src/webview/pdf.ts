@@ -1,3 +1,4 @@
+import {t} from '../shared/i18n';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 
 export function mountPdf(host: HTMLElement): () => void {
@@ -10,7 +11,7 @@ export function mountPdf(host: HTMLElement): () => void {
   const height=Number(params.get('height')); if(height>0)host.style.maxHeight=Math.min(height,2000)+'px';
   host.replaceChildren();
   const controls=document.createElement('div'), previous=document.createElement('button'), next=document.createElement('button'), label=document.createElement('span'), canvas=document.createElement('canvas');
-  controls.className='pdf-controls'; previous.textContent='上一页'; next.textContent='下一页'; controls.append(previous,label,next);host.append(controls,canvas);
+  controls.className='pdf-controls'; previous.textContent=t("上一页"); next.textContent=t("下一页"); controls.append(previous,label,next);host.append(controls,canvas);
   canvas.setAttribute('role','img');
   const task=getDocument({url:url.href,cMapUrl:base+'cmaps/',cMapPacked:true,standardFontDataUrl:base+'standard_fonts/',wasmUrl:base+'wasm/',useWasm:false,disableFontFace:true});
   let pdf: Awaited<typeof task.promise>;
@@ -19,12 +20,12 @@ export function mountPdf(host: HTMLElement): () => void {
     try{
       pageNumber=Math.min(pageNumber,pdf.numPages);const page=await pdf.getPage(pageNumber);
       const natural=page.getViewport({scale:1}), scale=Math.min(2,Math.max(320,host.clientWidth-4)/natural.width), viewport=page.getViewport({scale});
-      canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);canvas.setAttribute('aria-label',`PDF 第 ${pageNumber} 页，共 ${pdf.numPages} 页`);
+      canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);canvas.setAttribute('aria-label',t('PDF 第 {page} 页，共 {total} 页',{page:pageNumber,total:pdf.numPages}));
       await page.render({canvas,viewport}).promise;label.textContent=`${pageNumber} / ${pdf.numPages}`;
-    }catch(error){if(!disposed)label.textContent='PDF 渲染失败：'+String(error);}
+    }catch(error){if(!disposed)label.textContent=t("PDF 渲染失败：")+String(error);}
     finally{busy=false;previous.disabled=pageNumber<=1;next.disabled=pageNumber>=pdf.numPages;}
   };
   previous.onclick=()=>{pageNumber--;void render();};next.onclick=()=>{pageNumber++;void render();};
-  void task.promise.then(document=>{pdf=document;if(!disposed)void render();}).catch(error=>{if(!disposed)host.textContent='无法加载 PDF：'+String(error);});
+  void task.promise.then(document=>{pdf=document;if(!disposed)void render();}).catch(error=>{if(!disposed)host.textContent=t("无法加载 PDF：")+String(error);});
   return()=>{disposed=true;void task.destroy();};
 }

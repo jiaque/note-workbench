@@ -39,4 +39,5 @@ main{max-width:1240px;padding:32px 54px 64px}
 .document-menu .note-menu-motion{position:relative}
 .document-menu .note-menu-submenu{position:absolute;right:100%;top:0;width:155px;padding:6px;background:var(--bg);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px #0002}
 .document-menu .note-menu-submenu[hidden]{display:none}
+.document-menu:lang(en) .note-menu-submenu{width:190px}
 @media(max-width:480px),(max-height:450px){.document-menu nav{max-height:calc(100dvh - 52px);overflow-y:auto}.document-menu .note-menu-submenu{position:static;width:100%;box-shadow:none;margin:3px 0}.document-menu .note-menu-row[aria-expanded=true] .note-menu-trailing{transform:rotate(-90deg)}}

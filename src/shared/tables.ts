@@ -1,3 +1,4 @@
+import {t} from './i18n';
 import { parseFragment } from 'parse5';
 import { applyReplacements, type Replacement } from './edits';
 
@@ -39,7 +40,7 @@ export function markdownTable(source: string, from: number, to: number): Table {
     offset += line.length + eol;
   });
   const table: Table = { from, to, format: 'markdown', rows, separator };
-  if (!separator.length || rows.some(row => row.cells.length !== separator.length)) table.reason = '不规则表格请先通过源码修复列数。';
+  if (!separator.length || rows.some(row => row.cells.length !== separator.length)) table.reason = t("不规则表格请先通过源码修复列数。");
   return table;
 }
 
@@ -56,43 +57,43 @@ export function htmlTables(source: string, from: number, to: number): Table[] {
     let groups = 0;
     const groupIds = new Map<any, string>();
     walk(node, child => {
-      if (child.tagName === 'table' && child !== node) table.reason = '嵌套表格暂时仅支持源码编辑。';
+      if (child.tagName === 'table' && child !== node) table.reason = t("嵌套表格暂时仅支持源码编辑。");
       if(child.tagName==='colgroup'){
         const cols=(child.childNodes??[]).filter((item:any)=>item.tagName==='col');
-        if(!cols.length||child.attrs?.some((attr:any)=>attr.name==='span'&&attr.value!=='1'))table.reason='带 span 的列组请通过源码调整。';
+        if(!cols.length||child.attrs?.some((attr:any)=>attr.name==='span'&&attr.value!=='1'))table.reason=t("带 span 的列组请通过源码调整。");
       }
       if(child.tagName==='col'){
-        const loc=range(child);if(!loc||!range(child.parentNode)||child.attrs?.some((attr:any)=>attr.name==='span'&&attr.value!=='1'))table.reason='省略列组标签或跨多列的 col 定义请通过源码调整。';
+        const loc=range(child);if(!loc||!range(child.parentNode)||child.attrs?.some((attr:any)=>attr.name==='span'&&attr.value!=='1'))table.reason=t("省略列组标签或跨多列的 col 定义请通过源码调整。");
         else (table.columns??=[]).push({from:from+loc.startOffset,to:from+loc.endOffset,html:source.slice(from+loc.startOffset,from+loc.endOffset),groupFrom:from+range(child.parentNode).startOffset,groupTo:from+range(child.parentNode).endOffset});
       }
       if (child.tagName !== 'tr') return;
       const loc = range(child);
-      if (!loc) { table.reason = '无法定位表格源码。'; return; }
+      if (!loc) { table.reason = t("无法定位表格源码。"); return; }
       if (!groupIds.has(child.parentNode)) groupIds.set(child.parentNode, `${child.parentNode?.tagName ?? 'table'}:${groups++}`);
       const row: Row = { from: from + loc.startOffset, to: from + loc.endOffset, section: groupIds.get(child.parentNode)!, cells: [] };
       for (const cell of child.childNodes ?? []) {
         if (!['th', 'td'].includes(cell.tagName)) continue;
         const cellLoc = range(cell);
-        if (!cellLoc?.startTag || !cellLoc?.endTag) { table.reason = '省略闭合标签的表格暂时请通过源码编辑。'; continue; }
-        if ((cell.attrs ?? []).some((attr: any) => ['rowspan', 'colspan'].includes(attr.name) && attr.value !== '1')) table.reason = '合并单元格表格仅支持源码编辑。';
+        if (!cellLoc?.startTag || !cellLoc?.endTag) { table.reason = t("省略闭合标签的表格暂时请通过源码编辑。"); continue; }
+        if ((cell.attrs ?? []).some((attr: any) => ['rowspan', 'colspan'].includes(attr.name) && attr.value !== '1')) table.reason = t("合并单元格表格仅支持源码编辑。");
         const start = from + cellLoc.startTag.endOffset, end = from + cellLoc.endTag.startOffset;
         row.cells.push({ from: start, to: end, raw: source.slice(start, end), outerFrom: from + cellLoc.startOffset, outerTo: from + cellLoc.endOffset, tag: cell.tagName });
       }
       table.rows.push(row);
     });
-    if (!table.rows.length || !table.rows[0].cells.length || table.rows.some(row => row.cells.length !== table.rows[0].cells.length)) table.reason ??= '不规则表格暂时仅支持源码编辑。';
-    if(table.columns&&table.columns.length!==table.rows[0]?.cells.length)table.reason??='列定义数量与单元格不一致，请通过源码调整。';
+    if (!table.rows.length || !table.rows[0].cells.length || table.rows.some(row => row.cells.length !== table.rows[0].cells.length)) table.reason ??= t("不规则表格暂时仅支持源码编辑。");
+    if(table.columns&&table.columns.length!==table.rows[0]?.cells.length)table.reason??=t("列定义数量与单元格不一致，请通过源码调整。");
     result.push(table);
   });
   return result;
 }
 
 function move<T>(items: T[], from: number, to: number): T[] {
-  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= items.length || to >= items.length) throw new Error('无效移动位置。');
+  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= items.length || to >= items.length) throw new Error(t("无效移动位置。"));
   const next = [...items]; const [item] = next.splice(from, 1); next.splice(to, 0, item); return next;
 }
 const check = (index: number, length: number, insert = false) => {
-  if (!Number.isInteger(index) || index < 0 || index >= length + (insert ? 1 : 0)) throw new Error('无效行列位置。');
+  if (!Number.isInteger(index) || index < 0 || index >= length + (insert ? 1 : 0)) throw new Error(t("无效行列位置。"));
 };
 
 export function editTable(source: string, table: Table, op: TableOperation): Replacement[] {
@@ -104,14 +105,14 @@ export function editTable(source: string, table: Table, op: TableOperation): Rep
   if ('column' in op) check(op.column, width);
   if (op.kind === 'insertRow') check(op.at, rows.length, true);
   if (op.kind === 'insertColumn') check(op.at, width, true);
-  if (op.kind === 'deleteColumn' && width === 1) throw new Error('最后一列请使用“删除整个表格”。');
-  if(op.kind==='deleteRow'&&table.format==='html'&&rows.length===1)throw new Error('最后一行请使用“删除整个表格”。');
+  if (op.kind === 'deleteColumn' && width === 1) throw new Error(t("最后一列请使用“删除整个表格”。"));
+  if(op.kind==='deleteRow'&&table.format==='html'&&rows.length===1)throw new Error(t("最后一行请使用“删除整个表格”。"));
   if (op.kind === 'moveRow') {
     check(op.from, rows.length); check(op.to, rows.length);
-    if (rows[op.from].section !== rows[op.to].section || (table.format === 'markdown' && (!op.from || !op.to))) throw new Error('不能跨表头或 HTML 分区移动行。');
+    if (rows[op.from].section !== rows[op.to].section || (table.format === 'markdown' && (!op.from || !op.to))) throw new Error(t("不能跨表头或 HTML 分区移动行。"));
   }
   if (op.kind === 'moveColumn') { check(op.from, width); check(op.to, width); }
-  if(op.kind==='moveColumn'&&table.columns&&table.columns[op.from].groupFrom!==table.columns[op.to].groupFrom)throw new Error('不能跨 HTML 列样式分组移动，请在源码中调整 colgroup。');
+  if(op.kind==='moveColumn'&&table.columns&&table.columns[op.from].groupFrom!==table.columns[op.to].groupFrom)throw new Error(t("不能跨 HTML 列样式分组移动，请在源码中调整 colgroup。"));
   if (op.kind === 'moveRow' || op.kind === 'moveColumn') { if (op.from === op.to) return []; }
   if (table.format === 'markdown') {
     let grid = rows.map(row => row.cells.map(cell => cell.raw));
@@ -127,8 +128,8 @@ export function editTable(source: string, table: Table, op: TableOperation): Rep
         }
         grid[op.row][op.column] = ` ${text} `; break;
       }
-      case 'insertRow': if (!op.at) throw new Error('Markdown 表头上方不能插入数据行。'); grid.splice(op.at, 0, Array(width).fill(' ')); break;
-      case 'deleteRow': if (!op.row) throw new Error('Markdown 表头不能作为数据行删除。'); grid.splice(op.row, 1); break;
+      case 'insertRow': if (!op.at) throw new Error(t("Markdown 表头上方不能插入数据行。")); grid.splice(op.at, 0, Array(width).fill(' ')); break;
+      case 'deleteRow': if (!op.row) throw new Error(t("Markdown 表头不能作为数据行删除。")); grid.splice(op.row, 1); break;
       case 'insertColumn': grid.forEach(row => row.splice(op.at, 0, ' ')); separator.splice(op.at, 0, ' --- '); break;
       case 'deleteColumn': grid.forEach(row => row.splice(op.column, 1)); separator.splice(op.column, 1); break;
       case 'moveRow': grid = move(grid, op.from, op.to); break;
@@ -149,7 +150,7 @@ export function editTable(source: string, table: Table, op: TableOperation): Rep
     case 'deleteRow': return [patch(rows[op.row].from, rows[op.row].to, '')];
     case 'insertRow': {
       const reference = rows[op.row];
-      if (op.at !== op.row && op.at !== op.row + 1) throw new Error('只能在目标行前后插入。');
+      if (op.at !== op.row && op.at !== op.row + 1) throw new Error(t("只能在目标行前后插入。"));
       const tag = reference.section.startsWith('thead:') ? 'th' : 'td';
       const pos = op.at === op.row ? reference.from : reference.to;
       return [patch(pos, pos, `<tr>${Array(width).fill(`<${tag}></${tag}>`).join('')}</tr>`)];
@@ -167,6 +168,6 @@ export function editTable(source: string, table: Table, op: TableOperation): Rep
 export function updatedTable(source: string, table: Table, op: TableOperation): string { return applyReplacements(source, editTable(source, table, op)); }
 
 export function newMarkdownTable(rows:number,columns:number):string{
-  if(!Number.isInteger(rows)||!Number.isInteger(columns)||rows<1||columns<1||rows>100||columns>50)throw new Error('请选择 1–100 个数据行、1–50 列。');
-  return [Array.from({length:columns},(_,i)=>` 列 ${i+1} `),Array(columns).fill(' --- '),...Array.from({length:rows},()=>Array(columns).fill(' '))].map(row=>'|'+row.join('|')+'|').join('\n');
+  if(!Number.isInteger(rows)||!Number.isInteger(columns)||rows<1||columns<1||rows>100||columns>50)throw new Error(t("请选择 1–100 个数据行、1–50 列。"));
+  return [Array.from({length:columns},(_,i)=>` ${t('列 {index}',{index:i+1})} `),Array(columns).fill(' --- '),...Array.from({length:rows},()=>Array(columns).fill(' '))].map(row=>'|'+row.join('|')+'|').join('\n');
 }

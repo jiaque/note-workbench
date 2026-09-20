@@ -1,3 +1,4 @@
+import {t} from './i18n';
 import {parseFragment,serialize} from 'parse5';
 import {toHtml} from 'hast-util-to-html';
 import {cleanStyle,cleanSvgSheet} from './css-styles';
@@ -7,16 +8,16 @@ const animationAttrs=new Set('attributeName from to by values dur begin end repe
 const animatedProperties=new Set('x y x1 x2 y1 y2 cx cy r rx ry width height d points fill stroke stroke-width stroke-dashoffset opacity fill-opacity stroke-opacity transform visibility'.split(' '));
 const motionTags=new Set(['animate','animateTransform','animateMotion','set']);
 export function svgImage(source:string):{src:string;staticSrc:string;alt:string;width?:string;height?:string;style:string} {
-  if(source.length>500000||new TextEncoder().encode(source).byteLength>500000||/<!DOCTYPE|<!ENTITY/i.test(source))throw new Error('SVG 超过 500KB 或包含不支持的文档声明');
-  const root:any=parseFragment(source),svg=root.childNodes.find((n:any)=>n.tagName==='svg');if(!svg)throw new Error('SVG 结构无效');
+  if(source.length>500000||new TextEncoder().encode(source).byteLength>500000||/<!DOCTYPE|<!ENTITY/i.test(source))throw new Error(t("SVG 超过 500KB 或包含不支持的文档声明"));
+  const root:any=parseFragment(source),svg=root.childNodes.find((n:any)=>n.tagName==='svg');if(!svg)throw new Error(t("SVG 结构无效"));
   let count=0,animations=0;const ids=new Set<string>();
-  const collect=(n:any)=>{if(++count>5000)throw new Error('SVG 节点超过 5000');const id=n.attrs?.find((a:any)=>a.name==='id')?.value;if(id&&/^[a-zA-Z_][\w.-]*$/.test(id))ids.add(id);for(const c of n.childNodes??[])collect(c);};collect(svg);
+  const collect=(n:any)=>{if(++count>5000)throw new Error(t("SVG 节点超过 5000"));const id=n.attrs?.find((a:any)=>a.name==='id')?.value;if(id&&/^[a-zA-Z_][\w.-]*$/.test(id))ids.add(id);for(const c of n.childNodes??[])collect(c);};collect(svg);
   const visit=(node:any,staticMode:boolean):any=>{
     if(node.nodeName==='#text')return {...node,parentNode:undefined};
     if(node.tagName==='style'){const text=(node.childNodes??[]).map((c:any)=>c.value??'').join('');return {...node,attrs:[],childNodes:[{nodeName:'#text',value:cleanSvgSheet(text,staticMode)}]};}
     if(!tags.has(node.tagName))return undefined;
     const motion=motionTags.has(node.tagName);if(motion&&staticMode)return undefined;
-    if(motion&&++animations>100)throw new Error('SVG 动画超过 100 个');
+    if(motion&&++animations>100)throw new Error(t("SVG 动画超过 100 个"));
     const get=(key:string)=>node.attrs?.find((a:any)=>a.name===key)?.value??'';
     if(motion&&node.tagName!=='animateMotion'&&!animatedProperties.has(get('attributeName')))return undefined;
     const filtered=(node.attrs??[]).filter((a:any)=>{
@@ -35,7 +36,7 @@ export function svgImage(source:string):{src:string;staticSrc:string;alt:string;
     const out={...node,attrs:filtered,parentNode:undefined,childNodes:[] as any[]};out.childNodes=(node.childNodes??[]).map((n:any)=>visit(n,staticMode)).filter(Boolean);for(const c of out.childNodes)c.parentNode=out;return out;
   };
   const build=(staticMode:boolean)=>{const node=visit(svg,staticMode);node.attrs.push({name:'xmlns',value:'http://www.w3.org/2000/svg'});if(staticMode)node.childNodes.push({nodeName:'style',tagName:'style',namespaceURI:'http://www.w3.org/2000/svg',attrs:[],childNodes:[{nodeName:'#text',value:'*{animation:none!important;transition:none!important}'}]});return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(serialize({nodeName:'#document-fragment',childNodes:[node]} as any));};
-  const label=svg.childNodes.find((n:any)=>n.tagName==='title')?.childNodes?.map((n:any)=>n.value??'').join('')||'SVG 图表';
+  const label=svg.childNodes.find((n:any)=>n.tagName==='title')?.childNodes?.map((n:any)=>n.value??'').join('')||t("SVG 图表");
   const outerStyle=cleanStyle(svg.attrs.find((a:any)=>a.name==='style')?.value??'').split(';').filter(rule=>/^(width|height|max-width|min-width|display|margin(?:-(?:top|right|bottom|left))?|vertical-align):/.test(rule)).join(';');
   return {src:build(false),staticSrc:build(true),alt:label,style:outerStyle,width:svg.attrs.find((a:any)=>a.name==='width'&&/^\d+(px|%)?$/.test(a.value)&&parseFloat(a.value)<=4096)?.value,height:svg.attrs.find((a:any)=>a.name==='height'&&/^\d+(px|%)?$/.test(a.value)&&parseFloat(a.value)<=4096)?.value};
 }

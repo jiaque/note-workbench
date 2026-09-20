@@ -6,7 +6,21 @@
 
 本项目为独立开发的 VS Code 扩展，非 Obsidian 官方产品，未获其官方背书；运行时无需安装 Obsidian 或 Obsidian Visualizer。Obsidian 名称及相关商标归其各自权利人所有。
 
-使用 TypeScript 开发，当前为 **0.5.5 开发预览，不是需求文档中的完整首版**。
+使用 TypeScript 开发，当前为 **0.5.7 开发预览，不是需求文档中的完整首版**。
+
+## 界面语言 / Interface language
+
+在 VS Code 设置中搜索 `noteWorkbench.language`：
+
+- `auto`（默认）：跟随 VS Code 当前界面语言。中文使用简体中文，其他语言回退英文。
+- `zh-CN`：始终使用简体中文。
+- `en`：始终使用 English。
+
+修改后运行 **Developer: Reload Window（开发人员：重新加载窗口）** 生效。翻译覆盖笔记菜单、表格操作、块预览浮层、连接图、PDF 控件以及插件提示；不会翻译或改写笔记正文、文件名、用户属性和链接。
+
+VS Code 设置说明、命令面板名称和侧栏标题由 VS Code 的语言包机制加载，始终跟随 VS Code 界面语言，不受插件单独语言设置影响。默认读取的是 VS Code 的语言，不是远程开发服务器的操作系统语言。参见 [VS Code API](https://code.visualstudio.com/api/references/vscode-api#env.language)。
+
+**English:** Search for `noteWorkbench.language` in Settings. Choose `auto` to follow VS Code, `en` for English, or `zh-CN` for Simplified Chinese, then run **Developer: Reload Window**. Unsupported VS Code languages fall back to English. Note contents remain unchanged. Settings descriptions, command titles and the sidebar view name follow VS Code's display language independently of this setting.
 
 ## CSS 动效与动态 SVG
 

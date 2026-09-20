@@ -1,3 +1,4 @@
+import {t} from './i18n';
 export interface Replacement { from: number; to: number; insert: string; expectedText: string }
 
 export function applyReplacements(source: string, edits: Replacement[]): string {
@@ -5,7 +6,7 @@ export function applyReplacements(source: string, edits: Replacement[]): string 
   let end = 0;
   for (const edit of sorted) {
     if (!Number.isInteger(edit.from) || !Number.isInteger(edit.to) || edit.from < end || edit.to < edit.from || edit.to > source.length || source.slice(edit.from, edit.to) !== edit.expectedText)
-      throw new Error('文档范围已变化，请刷新后重试。');
+      throw new Error(t("文档范围已变化，请刷新后重试。"));
     end = edit.to;
   }
   return sorted.reverse().reduce((text, edit) => text.slice(0, edit.from) + edit.insert + text.slice(edit.to), source);

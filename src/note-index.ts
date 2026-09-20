@@ -1,3 +1,4 @@
+import {t} from './shared/i18n';
 import * as vscode from 'vscode';
 import {type NoteEntry, wikiCompletions} from './shared/note-links';
 
@@ -33,7 +34,7 @@ export class NoteIndex implements vscode.Disposable {
     const membership=this.membership;this.membership=false;
     const pending=new Set(this.dirty);this.dirty.clear();
     try{
-      await vscode.window.withProgress({location:vscode.ProgressLocation.Window,title:'Note Workbench：索引笔记',cancellable:true},async(progress,token)=>{
+      await vscode.window.withProgress({location:vscode.ProgressLocation.Window,title:t("Note Workbench：索引笔记"),cancellable:true},async(progress,token)=>{
         let ids=new Set(this.cache.keys());
         if(membership){
           ids=new Set();const config=vscode.workspace.getConfiguration('noteWorkbench.graph'),include=config.get<string[]>('include',[]),exclude=config.get<string[]>('exclude',[]);
@@ -57,7 +58,7 @@ export class NoteIndex implements vscode.Disposable {
         }
       });
       if(!this.disposed)this.events.fire();
-    }catch(error){this.membership ||= membership;for(const id of pending)this.dirty.add(id);void vscode.window.showWarningMessage('笔记索引未完成：'+String(error));}
+    }catch(error){this.membership ||= membership;for(const id of pending)this.dirty.add(id);void vscode.window.showWarningMessage(t("笔记索引未完成：")+String(error));}
   }
   async completions(origin:vscode.Uri,query:string){await this.ensure();const folder=vscode.workspace.getWorkspaceFolder(origin);const notes=this.notes.filter(note=>!folder||vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(note.id))?.uri.toString()===folder.uri.toString());return wikiCompletions(notes,origin.toString(),query);}
   dispose(){this.disposed=true;clearTimeout(this.timer);this.events.dispose();this.subscriptions.forEach(item=>item.dispose());}

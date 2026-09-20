@@ -1,3 +1,4 @@
+import {t} from '../shared/i18n';
 import { ChangeSet, EditorState, Transaction } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { defaultKeymap } from '@codemirror/commands';
@@ -46,7 +47,7 @@ let pendingCell:{from:number;row:number;column:number}|undefined;
 let mermaidPromise: Promise<any> | undefined;
 let disposeMedia: (()=>void)[]=[];
 const root = document.getElementById('app')!;
-root.innerHTML = `<details class="document-menu"><summary aria-label="笔记操作" title="笔记操作">···</summary><nav aria-label="笔记操作"></nav></details><div id="status" role="status" aria-live="polite"></div><main id="content"></main>`;
+root.innerHTML = `<details class="document-menu"><summary aria-label="${t("笔记操作")}" title="${t("笔记操作")}">···</summary><nav aria-label="${t("笔记操作")}"></nav></details><div id="status" role="status" aria-live="polite"></div><main id="content"></main>`;
 const content = document.getElementById('content')!;
 const status = document.getElementById('status')!;
 const nav = root.querySelector('nav')!;
@@ -133,9 +134,9 @@ function tableElement(table: Table, html: string): HTMLElement {
   let tableSource = editor?.state.doc.toString() ?? snapshot!.source;
   const wrapper = document.createElement('section'); wrapper.className = 'table-card';
   wrapper.dataset.sourceFrom = String(table.from);
-  wrapper.setAttribute('aria-label', `${table.format === 'markdown' ? 'Markdown' : 'HTML'} 表格`);
+  wrapper.setAttribute('aria-label', t('{format} 表格',{format:table.format === 'markdown' ? 'Markdown' : 'HTML'}));
   const menu = document.createElement('details'); menu.className = 'table-menu';
-  const menuToggle = document.createElement('summary'); menuToggle.textContent = '···'; menuToggle.setAttribute('aria-label', '表格操作'); menu.append(menuToggle);
+  const menuToggle = document.createElement('summary'); menuToggle.textContent = '···'; menuToggle.setAttribute('aria-label', t("表格操作")); menu.append(menuToggle);
   const tools = document.createElement('div'); tools.className = 'table-tools'; menu.append(tools);
   const renderedTable = document.createElement('template'); renderedTable.innerHTML = html;
   const renderedRows = Array.from(renderedTable.content.querySelector('table')?.rows ?? []);
@@ -143,41 +144,41 @@ function tableElement(table: Table, html: string): HTMLElement {
   let rowIndex = table.format === 'markdown' && table.rows.length > 1 ? 1 : 0, columnIndex = 0;
   const targetLabel = document.createElement('span');
   const actionButtons:{node:HTMLButtonElement;op:()=>TableOperation}[]=[];
-  const refreshTarget = () => { targetLabel.textContent = `第 ${rowIndex + 1} 行 / 第 ${columnIndex + 1} 列`;for(const action of actionButtons){try{editTable(tableSource,table,action.op());action.node.disabled=false;action.node.title='';}catch(error){action.node.disabled=true;action.node.title=String(error instanceof Error?error.message:error);}} };
+  const refreshTarget = () => { targetLabel.textContent = t('第 {row} 行 / 第 {column} 列',{row:rowIndex+1,column:columnIndex+1});for(const action of actionButtons){try{editTable(tableSource,table,action.op());action.node.disabled=false;action.node.title='';}catch(error){action.node.disabled=true;action.node.title=String(error instanceof Error?error.message:error);}} };
   refreshTarget(); tools.append(targetLabel);
   const execute = (op: TableOperation) => {
     if (!snapshot || sync.conflict) return;
-    if ((editor?.state.doc.toString() ?? snapshot.source) !== tableSource) { info('表格已变化，请重新选择单元格。', true); return; }
+    if ((editor?.state.doc.toString() ?? snapshot.source) !== tableSource) { info(t("表格已变化，请重新选择单元格。"), true); return; }
     try {
       flushCell?.();
       const row=op.kind==='insertRow'?op.at:op.kind==='moveRow'?op.to:op.kind==='deleteRow'?Math.min(op.row,table.rows.length-2):rowIndex;
       const column=op.kind==='insertColumn'?op.at:op.kind==='moveColumn'?op.to:op.kind==='deleteColumn'?Math.min(op.column,table.rows[0].cells.length-2):columnIndex;
       pendingCell={from:table.from,row:Math.max(0,row),column:Math.max(0,column)};
-      commit(editTable(tableSource, table, op));info('表格已更新，可用 Ctrl+Z 撤销。');
+      commit(editTable(tableSource, table, op));info(t("表格已更新，可用 Ctrl+Z 撤销。"));
     } catch (error) { pendingCell=undefined;info(String(error instanceof Error ? error.message : error), true); }
   };
   if (mode === 'edit' && !table.reason && !snapshot?.readonly) {
     const actions: [string, () => TableOperation][] = [
-      ['上方加行', () => ({ kind: 'insertRow', at: rowIndex, row: rowIndex })],
-      ['下方加行', () => ({ kind: 'insertRow', at: rowIndex + 1, row: rowIndex })],
-      ['左侧加列', () => ({ kind: 'insertColumn', at: columnIndex })],
-      ['右侧加列', () => ({ kind: 'insertColumn', at: columnIndex + 1 })],
-      ['删除行', () => ({ kind: 'deleteRow', row: rowIndex })],
-      ['删除列', () => ({ kind: 'deleteColumn', column: columnIndex })],
-      ['行上移', () => ({ kind: 'moveRow', from: rowIndex, to: rowIndex - 1 })],
-      ['行下移', () => ({ kind: 'moveRow', from: rowIndex, to: rowIndex + 1 })],
-      ['列左移', () => ({ kind: 'moveColumn', from: columnIndex, to: columnIndex - 1 })],
-      ['列右移', () => ({ kind: 'moveColumn', from: columnIndex, to: columnIndex + 1 })],
+      [t("上方加行"), () => ({ kind: 'insertRow', at: rowIndex, row: rowIndex })],
+      [t("下方加行"), () => ({ kind: 'insertRow', at: rowIndex + 1, row: rowIndex })],
+      [t("左侧加列"), () => ({ kind: 'insertColumn', at: columnIndex })],
+      [t("右侧加列"), () => ({ kind: 'insertColumn', at: columnIndex + 1 })],
+      [t("删除行"), () => ({ kind: 'deleteRow', row: rowIndex })],
+      [t("删除列"), () => ({ kind: 'deleteColumn', column: columnIndex })],
+      [t("行上移"), () => ({ kind: 'moveRow', from: rowIndex, to: rowIndex - 1 })],
+      [t("行下移"), () => ({ kind: 'moveRow', from: rowIndex, to: rowIndex + 1 })],
+      [t("列左移"), () => ({ kind: 'moveColumn', from: columnIndex, to: columnIndex - 1 })],
+      [t("列右移"), () => ({ kind: 'moveColumn', from: columnIndex, to: columnIndex + 1 })],
     ];
     for (const [label, op] of actions){const node=button(label,()=>execute(op()));actionButtons.push({node,op});tools.append(node);
       const highlight=()=>{grid.querySelectorAll('.operation-target').forEach(cell=>cell.classList.remove('operation-target'));if(node.disabled)return;const operation=op();const rowOperation=['insertRow','deleteRow','moveRow'].includes(operation.kind);const cells=rowOperation?grid.querySelectorAll(`[data-cell-row="${rowIndex}"]`):grid.querySelectorAll(`[data-cell-column="${columnIndex}"]`);cells.forEach(cell=>cell.classList.add('operation-target'));};
       node.addEventListener('mouseenter',highlight);node.addEventListener('focus',highlight);for(const event of ['mouseleave','blur'])node.addEventListener(event,()=>grid.querySelectorAll('.operation-target').forEach(cell=>cell.classList.remove('operation-target')));
     }
     refreshTarget();
-    if(table.format==='markdown')tools.append(button('清空表头内容',()=>{const replacements=table.rows[0].cells.reduce((source,_cell,column)=>applyReplacements(source,editTable(source,markdownTable(source,table.from,table.to+source.length-tableSource.length),{kind:'setCell',row:0,column,text:''})),tableSource);commit(minimalEdit(tableSource,replacements));}));
-    tools.append(button('删除整表', () => { if (confirm('删除整个表格？可以通过撤销恢复。')) commit([{ from: table.from, to: table.to, expectedText: tableSource.slice(table.from, table.to), insert: '' }]); }, 'danger'));
+    if(table.format==='markdown')tools.append(button(t("清空表头内容"),()=>{const replacements=table.rows[0].cells.reduce((source,_cell,column)=>applyReplacements(source,editTable(source,markdownTable(source,table.from,table.to+source.length-tableSource.length),{kind:'setCell',row:0,column,text:''})),tableSource);commit(minimalEdit(tableSource,replacements));}));
+    tools.append(button(t("删除整表"), () => { if (confirm(t("删除整个表格？可以通过撤销恢复。"))) commit([{ from: table.from, to: table.to, expectedText: tableSource.slice(table.from, table.to), insert: '' }]); }, 'danger'));
   }
-  tools.append(button('表格源码', () => openDraft(table.from, table.to)));
+  tools.append(button(t("表格源码"), () => openDraft(table.from, table.to)));
   if(mode==='edit')wrapper.append(menu);
   if (table.reason) { const note = document.createElement('p'); note.textContent = table.reason; wrapper.append(note); }
   const scroll = document.createElement('div'); scroll.className = 'table-scroll';
@@ -205,7 +206,7 @@ function tableElement(table: Table, html: string): HTMLElement {
       if (Math.hypot(event.clientX - dragging.x, event.clientY - dragging.y) > 6) dragging.moved = true;
       if (!dragging.moved) return;
       lastPoint={x:event.clientX,y:event.clientY};if(!scrollFrame)scrollFrame=requestAnimationFrame(autoScroll);
-      info(`正在移动第 ${index + 1} ${axis === 'row' ? '行' : '列'}，松开应用，Esc 取消。`);
+      info(t(axis==='row'?'正在移动第 {index} 行，松开应用，Esc 取消。':'正在移动第 {index} 列，松开应用，Esc 取消。',{index:index+1}));
       grid.querySelectorAll('.drop-target').forEach(node => node.classList.remove('drop-target'));
       const target = findTarget(event.clientX, event.clientY);
       if (target && grid.contains(target)){try{editTable(tableSource,table,{kind:axis==='row'?'moveRow':'moveColumn',from:index,to:Number(target.dataset.dropIndex)});target.classList.add('drop-target');}catch{}}
@@ -218,7 +219,7 @@ function tableElement(table: Table, html: string): HTMLElement {
     handle.addEventListener('pointerup', event => {
       const current = dragging, target = findTarget(event.clientX, event.clientY); clear();
       if (!current?.moved || !target || !grid.contains(target)) return;
-      if (snapshot?.version!==current.version||tableSource !== (editor?.state.doc.toString() ?? snapshot?.source)) { info('文档已变化，本次拖动已取消。', true); return; }
+      if (snapshot?.version!==current.version||tableSource !== (editor?.state.doc.toString() ?? snapshot?.source)) { info(t("文档已变化，本次拖动已取消。"), true); return; }
       execute({ kind: axis === 'row' ? 'moveRow' : 'moveColumn', from: current.from, to: Number(target.dataset.dropIndex) });
     });
     handle.addEventListener('pointercancel', clear);
@@ -229,7 +230,7 @@ function tableElement(table: Table, html: string): HTMLElement {
     element.dataset.dropAxis = axis; element.dataset.dropIndex = String(index);
   };
   const handles = document.createElement('tr'); handles.className = 'column-handles'; handles.append(document.createElement('th'));
-  table.rows[0]?.cells.forEach((_cell, col) => { const th = document.createElement('th'); const handle = button(`↔ ${col + 1}`, () => { columnIndex = col; refreshTarget(); }); handle.title = `拖动调整第 ${col + 1} 列顺序`; if (canEdit) { bindDrag(handle, 'column', col); bindDrop(th, 'column', col); } th.append(handle); handles.append(th); });
+  table.rows[0]?.cells.forEach((_cell, col) => { const th = document.createElement('th'); const handle = button(`↔ ${col + 1}`, () => { columnIndex = col; refreshTarget(); }); handle.title = t('拖动调整第 {index} 列顺序',{index:col+1}); if (canEdit) { bindDrag(handle, 'column', col); bindDrop(th, 'column', col); } th.append(handle); handles.append(th); });
   if (canEdit) grid.append(handles);
   else if(mode==='read'){handles.querySelectorAll('button').forEach(node=>node.remove());handles.setAttribute('aria-hidden','true');grid.append(handles);}
   table.rows.forEach((row, r) => {
@@ -237,9 +238,9 @@ function tableElement(table: Table, html: string): HTMLElement {
     for(const attribute of renderedRows[r]?.attributes??[])tr.setAttribute(attribute.name,attribute.value);
     if (canEdit) {
       const th = document.createElement('th'); th.className = 'row-handle';
-      const handle = button(`↕ ${r + 1}`, () => { rowIndex = r; refreshTarget(); }); handle.title = `拖动调整第 ${r + 1} 行顺序`;
+      const handle = button(`↕ ${r + 1}`, () => { rowIndex = r; refreshTarget(); }); handle.title = t('拖动调整第 {index} 行顺序',{index:r+1});
       if (!(table.format === 'markdown' && r === 0)) { bindDrag(handle, 'row', r); bindDrop(tr, 'row', r); }
-      else {handle.disabled=true;handle.title='Markdown 表头位置固定';}
+      else {handle.disabled=true;handle.title=t("Markdown 表头位置固定");}
       th.append(handle); tr.append(th);
     } else if(mode==='read') {
       // Reserve the handle gutter so removing controls does not reflow cells.
@@ -291,7 +292,7 @@ function tableElement(table: Table, html: string): HTMLElement {
           cellView=new EditorView({parent:host,state:EditorState.create({doc:originalValue,extensions:[
             markdown(),EditorView.lineWrapping,formattingKeys,wikiCompletion(message=>api.postMessage(message)),
             livePreview(()=>document.createElement('span'),true),
-            EditorView.contentAttributes.of({'aria-label':`编辑第 ${r+1} 行第 ${c+1} 列`}),
+            EditorView.contentAttributes.of({'aria-label':t('编辑第 {row} 行第 {column} 列',{row:r+1,column:c+1})}),
             keymap.of([{key:'Tab',run:()=>{move(1);return true;}},{key:'Shift-Tab',run:()=>{move(-1);return true;}},{key:'Escape',run:()=>{finish();td.focus();return true;}},{key:'Shift-Enter',run:view=>{if(composingCell||view.composing)return false;view.dispatch(view.state.replaceSelection('\n'));return true;}},{key:'Enter',run:view=>{if(composingCell||view.composing)return false;finish();td.focus();return true;}},...defaultKeymap]),
             EditorView.updateListener.of(update=>{if(update.docChanged)updateCell();}),
             EditorView.domEventHandlers({
@@ -318,8 +319,8 @@ function tableElement(table: Table, html: string): HTMLElement {
   scroll.append(grid); wrapper.append(scroll);
   if(pendingCell?.from===table.from){const target=pendingCell;pendingCell=undefined;requestAnimationFrame(()=>{if(wrapper.isConnected)grid.querySelector<HTMLElement>(`[data-cell-row="${target.row}"][data-cell-column="${target.column}"]`)?.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0}));});}
   if (canEdit) {
-    const addRow = button('+', () => execute({ kind: 'insertRow', at: table.rows.length, row: table.rows.length - 1 }), 'edge-add add-row'); addRow.setAttribute('aria-label', '末尾添加行'); addRow.title = '添加行';
-    const addColumn = button('+', () => execute({ kind: 'insertColumn', at: table.rows[0].cells.length }), 'edge-add add-column'); addColumn.setAttribute('aria-label', '末尾添加列'); addColumn.title = '添加列';
+    const addRow = button('+', () => execute({ kind: 'insertRow', at: table.rows.length, row: table.rows.length - 1 }), 'edge-add add-row'); addRow.setAttribute('aria-label', t("末尾添加行")); addRow.title = t("添加行");
+    const addColumn = button('+', () => execute({ kind: 'insertColumn', at: table.rows[0].cells.length }), 'edge-add add-column'); addColumn.setAttribute('aria-label', t("末尾添加列")); addColumn.title = t("添加列");
     wrapper.append(addRow, addColumn);
   }
   wrapper.addEventListener('keydown', event => { if (event.key === 'Escape') { menu.open = false; menuToggle.focus(); } });
@@ -338,15 +339,15 @@ function enhance(body: HTMLElement) {
           const target = document.createElement('div'); target.className = 'mermaid-diagram'; target.innerHTML = svg;
           for(const node of target.querySelectorAll<SVGElement>('.node.internal-link')){
             const label=node.querySelector('.nodeLabel,.label')?.textContent?.trim();if(!label)continue;
-            node.setAttribute('role','link');node.setAttribute('tabindex','0');node.setAttribute('aria-label',`打开笔记 ${label}`);node.style.cursor='pointer';
+            node.setAttribute('role','link');node.setAttribute('tabindex','0');node.setAttribute('aria-label',t('打开笔记 {name}',{name:label}));node.style.cursor='pointer';
             const open=()=>api.postMessage({type:'openLink',href:'nw-note:'+encodeURIComponent(label)});node.addEventListener('click',open);node.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();open();}});
           }
           code.parentElement!.replaceWith(target);
         } }
-        catch { if (code.isConnected) { const error = document.createElement('p'); error.className = 'render-error'; error.textContent = 'Mermaid 语法有误，请编辑此块修复。'; code.parentElement?.append(error); } }
+        catch { if (code.isConnected) { const error = document.createElement('p'); error.className = 'render-error'; error.textContent = t("Mermaid 语法有误，请编辑此块修复。"); code.parentElement?.append(error); } }
       });
     }
-    for (const pdf of body.querySelectorAll<HTMLElement>('[data-pdf-src]')) void import('./pdf').then(module=>{if(epoch===renderEpoch&&pdf.isConnected)disposeMedia.push(module.mountPdf(pdf));}).catch(error=>{pdf.textContent='PDF 模块加载失败：'+String(error);});
+    for (const pdf of body.querySelectorAll<HTMLElement>('[data-pdf-src]')) void import('./pdf').then(module=>{if(epoch===renderEpoch&&pdf.isConnected)disposeMedia.push(module.mountPdf(pdf));}).catch(error=>{pdf.textContent=t("PDF 模块加载失败：")+String(error);});
 }
 function blockElement(block: Block, view?: EditorView): HTMLElement {
   const currentSource = view?.state.doc.toString() ?? editor?.state.doc.toString() ?? snapshot!.source;
@@ -358,7 +359,7 @@ function blockElement(block: Block, view?: EditorView): HTMLElement {
   body.dataset.nwIdentity=String(block.from)+':'+block.source;
   for (const task of body.querySelectorAll<HTMLInputElement>('li[data-task-offset] > input[type="checkbox"],li[data-task-offset] > p > input[type="checkbox"]')) {
     const item = task.closest<HTMLElement>('[data-task-offset]')!, offset = Number(item.dataset.taskOffset);
-    task.disabled = !!snapshot?.readonly; task.setAttribute('aria-label',item.textContent?.trim() || '任务');
+    task.disabled = !!snapshot?.readonly; task.setAttribute('aria-label',item.textContent?.trim() || t("任务"));
     task.addEventListener('change', () => {
       const source = editor?.state.doc.toString() ?? sync.local;
       commit([{from:offset,to:offset+1,expectedText:source.slice(offset,offset+1),insert:task.checked?'x':' '}]);
@@ -375,8 +376,8 @@ function navigation() {
     const item=button(label,()=>{close();action();},'note-menu-row');item.prepend(icon(shape));return item;
   };
   const divider=()=>document.createElement('hr');
-  const modes=document.createElement('div');modes.className='note-menu-modes';modes.setAttribute('role','group');modes.setAttribute('aria-label','笔记视图');
-  for(const [value,label] of [['live','实时预览'],['read','阅读'],['source','源码']] as const){
+  const modes=document.createElement('div');modes.className='note-menu-modes';modes.setAttribute('role','group');modes.setAttribute('aria-label',t("笔记视图"));
+  for(const [value,label] of [['live',t("实时预览")],['read',t("阅读")],['source',t("源码")]] as const){
     const item=button(label,()=>{
       flushCell?.();flush();close();const previousMode=mode;mode=value==='read'?'read':'edit';sourceMode=value==='source';
       if(previousMode==='edit'&&mode==='edit'&&editor){editor.dispatch({effects:previewMode.of(!sourceMode)});navigation();floatingPreview.update(editor,!sourceMode);}
@@ -385,9 +386,9 @@ function navigation() {
     });
     item.setAttribute('aria-pressed',String(value===(mode==='read'?'read':sourceMode?'source':'live')));modes.append(item);
   }
-  const insert=row('插入表格',Table2,()=>{if(mode==='read'){mode='edit';sourceMode=false;render();}insertTable();});
+  const insert=row(t("插入表格"),Table2,()=>{if(mode==='read'){mode='edit';sourceMode=false;render();}insertTable();});
   insert.disabled=!!snapshot?.readonly||sync.conflict;
-  const properties=row('显示属性',Tag,()=>{
+  const properties=row(t("显示属性"),Tag,()=>{
     showProperties=!showProperties;
     if(mode==='read') render();
     else {content.classList.toggle('hide-properties',!showProperties);editor?.requestMeasure();navigation();}
@@ -395,11 +396,11 @@ function navigation() {
   properties.setAttribute('aria-pressed',String(showProperties));
   const check=icon(showProperties?SquareCheck:Square);check.classList.add('note-menu-trailing');properties.append(check);
   const motion=document.createElement('div');motion.className='note-menu-motion';
-  const trigger=button('动效控制',()=>setSubmenu(true),'note-menu-row');trigger.prepend(icon(Play));
+  const trigger=button(t("动效控制"),()=>setSubmenu(true),'note-menu-row');trigger.prepend(icon(Play));
   trigger.setAttribute('aria-expanded','false');trigger.setAttribute('aria-controls','note-motion-actions');
   const arrow=icon(ChevronLeft);arrow.classList.add('note-menu-trailing');trigger.append(arrow);
   const submenu=document.createElement('div');submenu.id='note-motion-actions';submenu.className='note-menu-submenu';submenu.hidden=true;
-  submenu.append(row(isMotionPaused()?'恢复动效':'暂停动效',isMotionPaused()?Play:Pause,()=>{info(toggleMotion()?'动效已暂停':'动效已恢复');navigation();}),row('重播 SVG',RotateCcw,replaySvg));
+  submenu.append(row(isMotionPaused()?t("恢复动效"):t("暂停动效"),isMotionPaused()?Play:Pause,()=>{info(toggleMotion()?t("动效已暂停"):t("动效已恢复"));navigation();}),row(t("重播 SVG"),RotateCcw,replaySvg));
   function setSubmenu(open:boolean){submenu.hidden=!open;trigger.setAttribute('aria-expanded',String(open));}
   motion.append(trigger,submenu);
   motion.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse')setSubmenu(true);});
@@ -409,16 +410,16 @@ function navigation() {
     if(event.key==='ArrowLeft'){event.preventDefault();setSubmenu(true);submenu.querySelector('button')?.focus();}
     if(event.key==='ArrowRight'||(event.key==='Escape'&&!submenu.hidden)){event.preventDefault();event.stopPropagation();trigger.focus();setSubmenu(false);}
   });
-  const save=row('保存',Save,()=>request('save'));
+  const save=row(t("保存"),Save,()=>request('save'));
   const shortcut=document.createElement('span');shortcut.className='note-menu-trailing';shortcut.textContent='Ctrl+S';save.append(shortcut);
-  nav.replaceChildren(modes,divider(),insert,properties,row('导出 PDF',FileDown,()=>request('exportPdf')),divider(),motion,row('在 VS Code 中编辑',Code2,()=>request('source')),divider(),save);
-  if (sync.conflict) nav.append(button('对比冲突内容',()=>api.postMessage({type:'compare',source:sync.local})),button('另存本地草稿',()=>api.postMessage({type:'recover',source:sync.local})),button('采用外部版本',()=>{if(!confirm('采用外部版本将放弃当前未同步草稿。请先对比或另存草稿。'))return;sync.pending=undefined;sync.conflict=false;sync.local=sync.source;cellRecovery=undefined;remember();render();info('已载入外部版本。');}),button('复制保留的编辑内容', () => { void navigator.clipboard.writeText(sync.local); }));
+  nav.replaceChildren(modes,divider(),insert,properties,row(t("导出 PDF"),FileDown,()=>request('exportPdf')),divider(),motion,row(t("在 VS Code 中编辑"),Code2,()=>request('source')),divider(),save);
+  if (sync.conflict) nav.append(button(t("对比冲突内容"),()=>api.postMessage({type:'compare',source:sync.local})),button(t("另存本地草稿"),()=>api.postMessage({type:'recover',source:sync.local})),button(t("采用外部版本"),()=>{if(!confirm(t("采用外部版本将放弃当前未同步草稿。请先对比或另存草稿。")))return;sync.pending=undefined;sync.conflict=false;sync.local=sync.source;cellRecovery=undefined;remember();render();info(t("已载入外部版本。"));}),button(t("复制保留的编辑内容"), () => { void navigator.clipboard.writeText(sync.local); }));
 }
 function insertTable(){
   if(!editor||sync.conflict||snapshot?.readonly)return;
   flushCell?.();const view=editor,position=view.state.selection.main.head;
   const dialog=document.createElement('dialog');dialog.className='insert-table-dialog';
-  dialog.innerHTML='<form method="dialog"><strong>插入 Markdown 表格</strong><label>数据行数<input name="rows" aria-label="数据行数" type="number" min="1" max="100" value="3" required></label><label>列数<input name="columns" aria-label="列数" type="number" min="1" max="50" value="3" required></label><p>表头另计一行。</p><button value="cancel" formnovalidate>取消</button><button value="insert">插入</button></form>';
+  dialog.innerHTML=`<form method="dialog"><strong>${t("插入 Markdown 表格")}</strong><label>${t("数据行数")}<input name="rows" aria-label="${t("数据行数")}" type="number" min="1" max="100" value="3" required></label><label>${t("列数")}<input name="columns" aria-label="${t("列数")}" type="number" min="1" max="50" value="3" required></label><p>${t("表头另计一行。")}</p><button value="cancel" formnovalidate>${t("取消")}</button><button value="insert">${t("插入")}</button></form>`;
   document.body.append(dialog);dialog.addEventListener('close',()=>{if(dialog.returnValue==='insert'&&editor===view){try{const rows=Number(dialog.querySelector<HTMLInputElement>('[name="rows"]')!.value),columns=Number(dialog.querySelector<HTMLInputElement>('[name="columns"]')!.value);const source=view.state.doc.toString(),line=view.state.doc.lineAt(position),at=line.to,insert='\n\n'+newMarkdownTable(rows,columns)+'\n\n';pendingCell={from:at+2,row:1,column:0};commit([{from:at,to:at,insert,expectedText:''}]);}catch(error){info(String(error),true);}}dialog.remove();view.focus();});dialog.showModal();
 }
 function render() {
@@ -442,7 +443,7 @@ function render() {
           ...defaultKeymap,
         ]), EditorView.lineWrapping,
         EditorState.readOnly.of(snapshot.readonly),
-        EditorView.contentAttributes.of({'aria-label':'笔记实时预览编辑器','spellcheck':'false'}),
+        EditorView.contentAttributes.of({'aria-label':t("笔记实时预览编辑器"),'spellcheck':'false'}),
         livePreview(blockElement),
         EditorView.updateListener.of(update => {
           if (update.docChanged && !update.transactions.some(tr => tr.annotation(Transaction.remote))) {
@@ -493,7 +494,7 @@ function receive(message: Snapshot) {
     if (result === 'external') editor.dispatch({changes:minimalEdit(editor.state.doc.toString(),message.source),annotations:Transaction.remote.of(true)});
     if (sync.local === message.source) editor.dispatch({effects:renderedBlocks.of(message.blocks)});
   } else if (mode === 'read') render();
-  if (sync.conflict) { info('检测到外部修改，当前草稿已保留。请从笔记菜单对比内容、另存草稿或采用外部版本。',true); navigation(); }
+  if (sync.conflict) { info(t("检测到外部修改，当前草稿已保留。请从笔记菜单对比内容、另存草稿或采用外部版本。"),true); navigation(); }
   else if (result === 'ack') { info(''); flush(); }
   remember();
   if(pendingOffset!==undefined){const offset=pendingOffset;pendingOffset=undefined;navigateOffset(offset);}
@@ -508,7 +509,7 @@ window.addEventListener('message',event => {
   else if (message?.type === 'navigate' && typeof message.fragment === 'string') { if (snapshot) navigate(message.fragment); else pendingNavigation=message.fragment; }
   else if (message?.type === 'conflict' || message?.type === 'error') {
     sync.pending=undefined; sync.conflict=true; remember(); navigation();
-    info(message.message ?? '文档在其他位置发生修改，当前输入已保留，请从笔记菜单复制内容后核对。',true);
+    info(message.message ?? t("文档在其他位置发生修改，当前输入已保留，请从笔记菜单复制内容后核对。"),true);
   }
 });
 document.addEventListener('keydown',event => {

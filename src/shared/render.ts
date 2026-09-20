@@ -1,3 +1,4 @@
+import {t} from './i18n';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
@@ -21,7 +22,7 @@ import {isolateSvg} from './svg-image';
 export interface Block { from: number; to: number; kind: string; html: string; source: string }
 export interface Rendered { blocks: Block[]; tables: Table[]; classes?: string[] }
 const parser = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ['yaml']).use(remarkMath).use(obsidianSyntax);
-const createRenderer = () => unified().use(remarkRehype, { allowDangerousHtml: true, footnoteLabel: '脚注' }).use(rehypeRaw)
+const createRenderer = () => unified().use(remarkRehype, { allowDangerousHtml: true, footnoteLabel: t("脚注"), footnoteBackLabel:t('返回正文') }).use(rehypeRaw)
   .use(() => (tree: any) => isolateSvg(tree))
   .use(() => (tree: any) => filterStyles(tree))
   .use(rehypeSanitize, {
@@ -141,7 +142,7 @@ function renderProperties(value: string): string {
     const doc = parseDocument(value, { uniqueKeys: true });
     if (doc.errors.length) throw new Error(doc.errors[0].message);
     const data = doc.toJS({ maxAliasCount: 50 });
-    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('属性必须是键值映射');
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error(t("属性必须是键值映射"));
     return '<dl class="properties">' + Object.entries(data).map(([key, item]) => `<dt>${escape(key)}</dt><dd>${Array.isArray(item) ? item.map(v => `<span class="property-chip">${escape(typeof v === 'object' ? JSON.stringify(v) : v)}</span>`).join(' ') : typeof item === 'boolean' ? `<input type="checkbox" disabled ${item ? 'checked' : ''} aria-label="${escape(key)}">` : escape(typeof item === 'object' ? JSON.stringify(item) : item)}</dd>`).join('') + '</dl>';
-  } catch (error) { return `<div class="render-error">YAML 属性错误：${escape(error instanceof Error ? error.message : error)}</div>`; }
+  } catch (error) { return `<div class="render-error">${t("YAML 属性错误：")}${escape(error instanceof Error ? error.message : error)}</div>`; }
 }

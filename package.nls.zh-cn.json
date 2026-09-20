@@ -1,0 +1,22 @@
+{
+  "extension.description": "在 VS Code 中使用 Obsidian 风格的 Markdown 编辑器，支持实时预览、笔记连接图、表格编辑、Markdown/HTML 渲染及 PDF 导出。",
+  "config.render.motion.enabled": "启用 CSS 动效和动态 SVG（默认开启，并尊重系统减少动态效果偏好）。关闭后保留静态内容和进度值；修改立即生效。",
+  "config.notes.newLocation": "缺失笔记的创建目录：current 为当前笔记目录，root 为工作区根目录，folder 使用自定义目录。链接中明确指定路径时优先使用链接路径。",
+  "config.notes.newFolder": "新笔记自定义目录，相对于当前笔记库根目录。",
+  "config.render.remoteImages": "允许加载 HTTPS 远程图片；关闭后仅允许笔记库内及 data 图片。适用于编辑、阅读、浮层和 PDF。修改后重新打开笔记生效。",
+  "config.pdf.browserPath": "PDF 导出使用的 Edge / Chrome 可执行文件路径。留空自动检测本机浏览器，无需安装 npm。",
+  "config.styleSheets": "笔记库内的 CSS 文件相对路径，按顺序应用到笔记视图。配合 YAML cssclasses 自定义展示。修改后重新打开笔记。",
+  "config.editor.blockPreview.enabled": "编辑非表格块时，在其上方显示实时渲染浮层。离开后修改同步到文档，磁盘保存遵循 VS Code Auto Save 或 Ctrl+S。",
+  "config.graph.include": "连接图包含的文件 glob；留空包含笔记库内全部 Markdown。",
+  "config.graph.exclude": "连接图排除的文件 glob。",
+  "language.auto": "跟随 VS Code 界面语言（默认）",
+  "language.zh": "简体中文",
+  "language.en": "English",
+  "config.language": "Note Workbench 界面语言。自动跟随 VS Code：中文使用简体中文，其他语言使用英文。修改后运行 Developer: Reload Window 生效；设置说明和命令名称始终跟随 VS Code。",
+  "command.exportPdf": "Note Workbench: 导出 PDF",
+  "command.openEditor": "Note Workbench: 打开笔记编辑器",
+  "command.openSource": "Note Workbench: 打开源码",
+  "command.rebuildIndex": "Note Workbench: 刷新连接图",
+  "command.openGraph": "Note Workbench: 打开连接图",
+  "view.graph": "连接图"
+}

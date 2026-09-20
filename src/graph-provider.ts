@@ -1,3 +1,5 @@
+import {getLanguage} from './shared/i18n';
+import {t} from './shared/i18n';
 import * as vscode from 'vscode';
 import {randomBytes} from 'node:crypto';
 import {buildGraph,type GraphData} from './shared/graph';
@@ -15,11 +17,11 @@ export class GraphProvider implements vscode.WebviewViewProvider,vscode.Disposab
   }
   setActive(uri:vscode.Uri){this.current=uri.toString();this.data.active=this.current;for(const view of this.views)void view.postMessage({type:'graph',...this.data});}
   resolveWebviewView(view:vscode.WebviewView){this.attach(view.webview,view.onDidDispose);}
-  open(){const panel=vscode.window.createWebviewPanel('noteWorkbench.graphPanel','笔记连接图',vscode.ViewColumn.Beside,{enableScripts:true,retainContextWhenHidden:true});this.attach(panel.webview,panel.onDidDispose);}
+  open(){const panel=vscode.window.createWebviewPanel('noteWorkbench.graphPanel',t("笔记连接图"),vscode.ViewColumn.Beside,{enableScripts:true,retainContextWhenHidden:true});this.attach(panel.webview,panel.onDidDispose);}
   private attach(webview:vscode.Webview,onDispose:vscode.Event<void>){
     webview.options={enableScripts:true,localResourceRoots:[vscode.Uri.joinPath(this.context.extensionUri,'dist')]};
     const asset=(name:string)=>webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri,'dist','webview',name)),nonce=randomBytes(16).toString('hex');
-    webview.html=`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none';style-src ${webview.cspSource} 'unsafe-inline';script-src 'nonce-${nonce}';"><link rel="stylesheet" href="${asset('graph.css')}"><body><div id="graph-app"></div><script nonce="${nonce}" src="${asset('graph.js')}"></script></body></html>`;
+    webview.html=`<!doctype html><html lang="${getLanguage()}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none';style-src ${webview.cspSource} 'unsafe-inline';script-src 'nonce-${nonce}';"><link rel="stylesheet" href="${asset('graph.css')}"><body><div id="graph-app"></div><script nonce="${nonce}" src="${asset('graph.js')}"></script></body></html>`;
     this.views.add(webview);
     const messages=webview.onDidReceiveMessage(async message=>{
       if(message?.type==='ready'){await webview.postMessage({type:'layout',value:this.context.workspaceState.get('graph.layout',{})});this.refresh();}

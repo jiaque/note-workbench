@@ -1,7 +1,8 @@
+import {t} from '../shared/i18n';
 import {EditorView,keymap} from '@codemirror/view';
 
 export type Format='bold'|'italic'|'strike'|'code'|'link'|'quote'|'bullet'|'task'|'heading';
-export const formats:[Format,string][]=[['bold','加粗'],['italic','斜体'],['strike','删除线'],['code','行内代码'],['link','链接'],['heading','二级标题'],['quote','引用'],['bullet','无序列表'],['task','任务列表']];
+export const formats:[Format,string][]=[['bold',t("加粗")],['italic',t("斜体")],['strike',t("删除线")],['code',t("行内代码")],['link',t("链接")],['heading',t("二级标题")],['quote',t("引用")],['bullet',t("无序列表")],['task',t("任务列表")]];
 export function format(view:EditorView,kind:Format):boolean{
   if(view.state.readOnly||view.composing)return false;
   const selection=view.state.selection.main,source=view.state.doc,selected=source.sliceString(selection.from,selection.to);
@@ -12,7 +13,7 @@ export function format(view:EditorView,kind:Format):boolean{
     const insert=wrapped?selected.slice(mark.length,-mark.length):mark+selected+mark;
     view.dispatch({changes:{from:selection.from,to:selection.to,insert},selection:{anchor:selection.from+(wrapped?0:mark.length),head:selection.from+insert.length-(wrapped?0:mark.length)},userEvent:'input'});
   }else if(kind==='link'){
-    const insert='['+(selected||'链接文字')+'](https://)';const from=selection.from+insert.indexOf('https://');
+    const insert='['+(selected||t("链接文字"))+'](https://)';const from=selection.from+insert.indexOf('https://');
     view.dispatch({changes:{from:selection.from,to:selection.to,insert},selection:{anchor:from,head:from+8},userEvent:'input'});
   }else{
     const from=source.lineAt(selection.from).from,to=source.lineAt(selection.to).to,prefix={quote:'> ',bullet:'- ',task:'- [ ] ',heading:'## '}[kind as 'quote'|'bullet'|'task'|'heading'];
