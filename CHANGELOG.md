@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix local development update white screens caused by missing hashed JavaScript chunks. Add `npm run sync:dev` to copy and verify the complete build while preserving the development extension identity.
+
 - Prevent handled formatting and editor shortcuts from also triggering VS Code commands; retain host shortcuts outside the editor and unhandled modifier combinations.
 
 - Add document find in Live Preview, Reading and Source with Ctrl/Cmd+F, next/previous navigation, result counts, case matching and highlights.

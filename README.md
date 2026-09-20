@@ -161,6 +161,8 @@ npm run package
 
 Packaging creates `artifacts/note-workbench-<version>.vsix`. Install through **Extensions → ⋯ → Install from VSIX**. Packaging does not publish or push. The formal ID is `jiaque.note-workbench`; `local-development.note-workbench` is the separate maintenance identity. Avoid enabling both for the same workflow.
 
+When the matching development version is already installed, run `npm run build`, then `npm run sync:dev`, and reload the VS Code window. Sync copies and verifies the **entire** build, including hashed chunks; copying only `editor.js` can produce a blank editor. Use `npm run sync:dev -- --check` to verify without copying. Manifest/version changes still require installing an updated development package.
+
 Host tests use an isolated profile. Set `NOTE_WORKBENCH_VSCODE` to an existing VS Code executable to avoid the default runtime download. `npm run preview` is a development-only webview preview: edits stay in memory and do not save the example file. See [screenshot reproduction](docs/images/README.md).
 
 ## Feedback and license

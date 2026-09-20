@@ -161,6 +161,8 @@ npm run package
 
 输出 `artifacts/note-workbench-<version>.vsix`，通过**扩展 → ⋯ → 从 VSIX 安装**试用。打包不会自动发布或推送。正式 ID 为 `jiaque.note-workbench`，`local-development.note-workbench` 是维护用独立身份，同一工作流中避免同时启用两者。
 
+本地开发更新：已安装同版本开发扩展时，依次运行 `npm run build`、`npm run sync:dev`，再重新加载 VS Code 窗口。同步会复制并校验完整构建（包括带哈希文件名的分块脚本），不能只复制 `editor.js`，否则可能白屏。`npm run sync:dev -- --check` 仅校验；修改扩展清单或版本后仍需重新安装开发包。
+
 宿主测试使用隔离配置。设置 `NOTE_WORKBENCH_VSCODE` 指向本机 VS Code 可跳过默认运行时下载。`npm run preview` 仅供开发预览，修改在内存中，不写回样例文件。参见[截图复现说明](docs/images/README.md)。
 
 ## 反馈与许可
