@@ -21,6 +21,10 @@
 
 ## 2. 架构决策
 
+### 待确认设计：HTML/CSS 动效与折叠统一
+
+详见 [HTML/CSS 动效与折叠样式设计](css-motion-design.md)。拟通过 `data-nw-*` 和内联参数提供 34 个动效预设，并统一 HTML details 与 Markdown Callout 的折叠样式。本节仅记录设计入口，不代表当前版本已支持。
+
 ### 首版补齐（0.5.4，2026-09-20）
 
 `NoteIndex` 统一管理笔记内容缓存、文件监听和变更进度。文件新增/删除重新发现成员；一般文档编辑只读取变更笔记。`note-links.ts` 管理别名/标题/块元数据及候选解析，源码 CompletionItemProvider 与 CodeMirror 补全共享结果。`graph.ts` 缓存各笔记引用，反向链接保留每个来源位置及上下文。补全索引与图谱采用相同 include/exclude 设置。
