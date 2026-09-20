@@ -21,6 +21,18 @@
 
 ## 2. 架构决策
 
+### 首版补齐（0.5.4，2026-09-20）
+
+`NoteIndex` 统一管理笔记内容缓存、文件监听和变更进度。文件新增/删除重新发现成员；一般文档编辑只读取变更笔记。`note-links.ts` 管理别名/标题/块元数据及候选解析，源码 CompletionItemProvider 与 CodeMirror 补全共享结果。`graph.ts` 缓存各笔记引用，反向链接保留每个来源位置及上下文。补全索引与图谱采用相同 include/exclude 设置。
+
+宿主在用户点击缺失链接时提供创建入口，并验证创建路径及现有父目录真实路径仍位于当前库内；普通渲染不创建文件、不弹出同名选择。新笔记默认当前目录，可配置根目录/指定目录。
+
+阅读视图复用 `tableElement` 和 `live-widget`，隐藏操作控件但保留相同的占位结构；显式 `colgroup/col` 与原单元格一起修改。`newMarkdownTable` 负责新表格，结构操作通过同一 WorkspaceEdit 原子提交。非安全的 span 列定义、跨列样式组重排继续提供源码入口。
+
+原生 undo/redo 直接交给活动 CustomTextEditor 的 VS Code 文档历史，不打开 TextEditor。冲突处理提供 VS Code diff、未保存草稿文档和主动采用外部版本；默认不覆盖外部修改。远程图片配置在 CSP 与占位内容两层应用，PDF 使用相同策略。
+
+`webview/mermaid.ts` 集中加载本地 Mermaid 与官方 ZenUML；编辑/阅读/浮层及 PDF 使用同一模块。详细验证及明确暂缓范围见[本轮记录](first-release-completion.md)。
+
 ### PDF 导出（0.5.0）
 
 笔记菜单通过原有同步队列排空输入后发送 `exportPdf`；命令面板在活动自定义编辑器中走同一入口，普通 Markdown 文本编辑器则读取 TextDocument。固定导出快照，不强制保存原文件。保存对话框选择目标，进度通知支持取消，完整 PDF 成功生成后才写入目标文件。

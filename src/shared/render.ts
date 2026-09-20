@@ -23,10 +23,11 @@ const createRenderer = () => unified().use(remarkRehype, { allowDangerousHtml: t
   .use(rehypeSanitize, {
     ...defaultSchema,
     protocols: { ...defaultSchema.protocols, href: [...(defaultSchema.protocols?.href ?? []), 'file', 'nw-note', 'nw-tag', 'obsidian'] },
-    tagNames: [...defaultSchema.tagNames!, 'details', 'summary', 'mark', 'sub', 'sup', 'u', 'abbr', 'figure', 'figcaption', 'audio', 'video', 'source', 'svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'tspan', 'title', 'desc'],
+    tagNames: [...defaultSchema.tagNames!, 'colgroup', 'col', 'details', 'summary', 'mark', 'sub', 'sup', 'u', 'abbr', 'figure', 'figcaption', 'audio', 'video', 'source', 'svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'tspan', 'title', 'desc'],
     attributes: { ...defaultSchema.attributes,
       '*': [...(defaultSchema.attributes!['*'] ?? []), 'style', 'className', 'dataNwBlock', 'dataHeading', 'dataNoteTarget', 'dataEmbed', 'dataWidth', 'dataHeight', 'dataVaultImage', 'dataTaskOffset', 'dataTaskMark'],
       code: [['className', /^language-./, 'math-inline', 'math-display']], details: ['open'],
+      col:['span','width'],colgroup:['span'],
       audio:['src','controls','loop','muted','preload'],video:['src','controls','loop','muted','preload','poster','width','height'],source:['src','type'],
       ...Object.fromEntries(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'tspan'].map(tag => [tag, ['viewBox', 'width', 'height', 'x', 'y', 'x1', 'x2', 'y1', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'd', 'points', 'fill', 'stroke', 'strokeWidth', 'strokeDashArray', 'strokeLinecap', 'strokeLinejoin', 'opacity', 'fillOpacity', 'strokeOpacity', 'transform', 'textAnchor', 'fontSize', 'fontWeight', 'fontFamily', 'role', 'ariaLabel']])) },
   })

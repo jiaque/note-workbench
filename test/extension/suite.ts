@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import assert from 'node:assert/strict';
 import { NotebookProvider } from '../../src/extension';
+import {NoteIndex} from '../../src/note-index';
 
 export async function run() {
   const folder = vscode.workspace.workspaceFolders![0].uri;
@@ -14,6 +15,9 @@ export async function run() {
   assert.ok(extension, 'Extension must be independently installed in development host');
   await extension.activate();
   const provider = new NotebookProvider({ extensionUri: extension.extensionUri } as any);
+  const index=new NoteIndex();
+  const linked=vscode.Uri.joinPath(folder,'.integration-linked.md');
+  const defaultUri=vscode.Uri.joinPath(folder,'.integration-default.md');
   const waitFor = async (predicate: () => boolean) => { const limit = Date.now() + 8000; while (!predicate()) { if (Date.now() > limit) throw new Error('Timed out waiting for host edit'); await new Promise(resolve => setTimeout(resolve, 30)); } };
   try {
     await provider.resolveCustomTextEditor(document, fakePanel);
@@ -38,10 +42,46 @@ export async function run() {
     await vscode.commands.executeCommand('redo'); await waitFor(() => document.getText().startsWith('# Changed'));
     await document.save();
     await vscode.commands.executeCommand('vscode.openWith', uri, 'noteWorkbench.editor');
-    console.log('PASS: custom editor registration, real document edit/save, stale rejection and undo/redo');
+    const activeTab=vscode.window.tabGroups.activeTabGroup.activeTab;
+    assert.ok(activeTab?.input instanceof vscode.TabInputCustom);
+    await vscode.commands.executeCommand('undo');await waitFor(()=>document.getText().startsWith('# Original'));
+    assert.equal(vscode.window.tabGroups.activeTabGroup.activeTab,activeTab,'Undo must retain the same custom editor tab');
+    await vscode.commands.executeCommand('redo');await waitFor(()=>document.getText().startsWith('# Changed'));
+    assert.equal(vscode.window.tabGroups.activeTabGroup.activeTab,activeTab,'Redo must retain the same custom editor tab');
+    await document.save();
+    console.log('PASS: custom editor registration, real document edit/save, stale rejection and undo/redo without source-tab switching');
+    await index.ensure();const unchanged=index.notes.find(note=>note.name==='Second.md');assert.ok(unchanged);
+    const secondMessages:any[]=[];const secondPanel={...fakePanel,webview:{...fakePanel.webview,postMessage:async(message:any)=>{secondMessages.push(message);return true;}}};
+    await provider.resolveCustomTextEditor(document,secondPanel as any);
+    const append=new vscode.WorkspaceEdit();append.insert(uri,document.positionAt(document.getText().length),'\n[[Sec');await vscode.workspace.applyEdit(append);
+    await waitFor(()=>secondMessages.some(message=>message.type==='snapshot'&&message.source.endsWith('[[Sec')));
+    const completion=await vscode.commands.executeCommand<vscode.CompletionList>('vscode.executeCompletionItemProvider',uri,document.positionAt(document.getText().length));
+    assert.ok(completion.items.some(item=>item.label==='Second'),'Source editor completion includes indexed notes');
+    await index.ensure();assert.equal(index.notes.find(note=>note.name==='Second.md'),unchanged,'Unchanged notes retain cache identity');
+    assert.ok(index.notes.find(note=>note.id===uri.toString())?.source.endsWith('[[Sec'));
+    console.log('PASS: multiple views synchronize, source completions work, incremental index retains unchanged notes');
+    await vscode.workspace.fs.writeFile(linked,Buffer.from('Embedded original'));
+    const embed=new vscode.WorkspaceEdit();embed.insert(uri,document.positionAt(document.getText().length),']]\n\n![[.integration-linked]]\n');await vscode.workspace.applyEdit(embed);
+    await waitFor(()=>messages.some(message=>message.type==='snapshot'&&message.blocks.some((block:any)=>block.html.includes('Embedded original'))));
+    const linkedDoc=await vscode.workspace.openTextDocument(linked),change=new vscode.WorkspaceEdit();change.replace(linked,new vscode.Range(linkedDoc.positionAt(0),linkedDoc.positionAt(linkedDoc.getText().length)),'Embedded updated');await vscode.workspace.applyEdit(change);
+    await waitFor(()=>messages.some(message=>message.type==='snapshot'&&message.blocks.some((block:any)=>block.html.includes('Embedded updated'))));
+    await linkedDoc.save();await document.save();
+    console.log('PASS: embedded source edits refresh the host note without rewriting host source');
+    await vscode.workspace.fs.writeFile(defaultUri,Buffer.from('# Default editor'));
+    await vscode.commands.executeCommand('vscode.open',defaultUri);
+    assert.ok(vscode.window.tabGroups.activeTabGroup.activeTab?.input instanceof vscode.TabInputCustom,'A new Markdown file opens with the default custom editor candidate');
+    const config=vscode.workspace.getConfiguration('files'),previous=config.inspect<string>('autoSave')?.globalValue;
+    try{
+      await config.update('autoSave','afterDelay',vscode.ConfigurationTarget.Global);
+      const autoDoc=await vscode.workspace.openTextDocument(defaultUri),edit=new vscode.WorkspaceEdit();edit.insert(defaultUri,autoDoc.positionAt(autoDoc.getText().length),'\nAutosaved');await vscode.workspace.applyEdit(edit);
+      await waitFor(()=>!autoDoc.isDirty);assert.match(Buffer.from(await vscode.workspace.fs.readFile(defaultUri)).toString('utf8'),/Autosaved/);
+    }finally{await config.update('autoSave',previous,vscode.ConfigurationTarget.Global);}
+    console.log('PASS: fresh Markdown default editor selection and VS Code Auto Save');
   } finally {
-    provider.dispose(); incoming.dispose(); state.dispose(); disposed.dispose();
+    provider.dispose();index.dispose(); incoming.dispose(); state.dispose(); disposed.dispose();
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     await vscode.workspace.fs.delete(uri);
+    try{await vscode.workspace.fs.delete(linked);}catch{}
+    try{await vscode.workspace.fs.delete(defaultUri);}catch{}
   }
 }

@@ -1,9 +1,10 @@
 import './export.css';
+import {loadMermaid} from './mermaid';
 declare global{interface Window{__notePdfState?:{ready?:boolean;error?:string}}}
 async function prepare(){
   for(const details of document.querySelectorAll('details'))details.open=true;
   const diagrams=[...document.querySelectorAll<HTMLElement>('code.language-mermaid')];
-  if(diagrams.length){const {default:mermaid}=await import('mermaid');mermaid.initialize({startOnLoad:false,securityLevel:'strict',suppressErrorRendering:true,theme:'default'});
+  if(diagrams.length){const mermaid=await loadMermaid();
     for(const [index,code]of diagrams.entries()){const {svg}=await mermaid.render('pdf-diagram-'+index,code.textContent??'');const wrapper=document.createElement('div');wrapper.className='mermaid-diagram';wrapper.innerHTML=svg;code.parentElement!.replaceWith(wrapper);}
   }
   for(const media of document.querySelectorAll('audio,video,[data-pdf-src]')){const label=document.createElement('p');label.className='pdf-media-note';label.textContent=media.hasAttribute('data-pdf-src')?'[PDF 附件：请在原笔记中打开]':'[音视频附件：请在原笔记中播放]';media.replaceWith(label);}

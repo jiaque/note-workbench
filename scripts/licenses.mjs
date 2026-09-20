@@ -14,5 +14,5 @@ for (const [location, entry] of Object.entries(lock.packages)) {
     const content=await readFile(location+'/'+directory+'/'+file,'utf8');output+=`### ${directory}/${file}\n\n\u0060\u0060\u0060text\n${content}\n\u0060\u0060\u0060\n\n`;
   }
 }
-await writeFile('THIRD_PARTY_NOTICES.md', output.trimEnd() + '\n');
+await writeFile('THIRD_PARTY_NOTICES.md', output.replace(/\r\n/g,'\n').replace(/[\t ]+$/gm,'').trimEnd() + '\n');
 console.log('Generated third-party notices for production dependencies.');

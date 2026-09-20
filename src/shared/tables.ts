@@ -3,7 +3,7 @@ import { applyReplacements, type Replacement } from './edits';
 
 export interface Cell { from: number; to: number; raw: string; outerFrom?: number; outerTo?: number; tag?: string }
 export interface Row { from: number; to: number; cells: Cell[]; section: string }
-export interface Table { from: number; to: number; format: 'markdown' | 'html'; rows: Row[]; separator?: string[]; reason?: string }
+export interface Table { from: number; to: number; format: 'markdown' | 'html'; rows: Row[]; separator?: string[]; reason?: string; columns?:{from:number;to:number;html:string;groupFrom:number;groupTo:number}[] }
 export type TableOperation =
   | { kind: 'setCell'; row: number; column: number; text: string }
   | { kind: 'insertRow'; at: number; row: number }
@@ -57,7 +57,14 @@ export function htmlTables(source: string, from: number, to: number): Table[] {
     const groupIds = new Map<any, string>();
     walk(node, child => {
       if (child.tagName === 'table' && child !== node) table.reason = '嵌套表格暂时仅支持源码编辑。';
-      if (child.tagName === 'colgroup') table.reason = '含 colgroup 的列定义尚待实现，请使用源码编辑。';
+      if(child.tagName==='colgroup'){
+        const cols=(child.childNodes??[]).filter((item:any)=>item.tagName==='col');
+        if(!cols.length||child.attrs?.some((attr:any)=>attr.name==='span'&&attr.value!=='1'))table.reason='带 span 的列组请通过源码调整。';
+      }
+      if(child.tagName==='col'){
+        const loc=range(child);if(!loc||!range(child.parentNode)||child.attrs?.some((attr:any)=>attr.name==='span'&&attr.value!=='1'))table.reason='省略列组标签或跨多列的 col 定义请通过源码调整。';
+        else (table.columns??=[]).push({from:from+loc.startOffset,to:from+loc.endOffset,html:source.slice(from+loc.startOffset,from+loc.endOffset),groupFrom:from+range(child.parentNode).startOffset,groupTo:from+range(child.parentNode).endOffset});
+      }
       if (child.tagName !== 'tr') return;
       const loc = range(child);
       if (!loc) { table.reason = '无法定位表格源码。'; return; }
@@ -74,6 +81,7 @@ export function htmlTables(source: string, from: number, to: number): Table[] {
       table.rows.push(row);
     });
     if (!table.rows.length || !table.rows[0].cells.length || table.rows.some(row => row.cells.length !== table.rows[0].cells.length)) table.reason ??= '不规则表格暂时仅支持源码编辑。';
+    if(table.columns&&table.columns.length!==table.rows[0]?.cells.length)table.reason??='列定义数量与单元格不一致，请通过源码调整。';
     result.push(table);
   });
   return result;
@@ -97,11 +105,13 @@ export function editTable(source: string, table: Table, op: TableOperation): Rep
   if (op.kind === 'insertRow') check(op.at, rows.length, true);
   if (op.kind === 'insertColumn') check(op.at, width, true);
   if (op.kind === 'deleteColumn' && width === 1) throw new Error('最后一列请使用“删除整个表格”。');
+  if(op.kind==='deleteRow'&&table.format==='html'&&rows.length===1)throw new Error('最后一行请使用“删除整个表格”。');
   if (op.kind === 'moveRow') {
     check(op.from, rows.length); check(op.to, rows.length);
     if (rows[op.from].section !== rows[op.to].section || (table.format === 'markdown' && (!op.from || !op.to))) throw new Error('不能跨表头或 HTML 分区移动行。');
   }
   if (op.kind === 'moveColumn') { check(op.from, width); check(op.to, width); }
+  if(op.kind==='moveColumn'&&table.columns&&table.columns[op.from].groupFrom!==table.columns[op.to].groupFrom)throw new Error('不能跨 HTML 列样式分组移动，请在源码中调整 colgroup。');
   if (op.kind === 'moveRow' || op.kind === 'moveColumn') { if (op.from === op.to) return []; }
   if (table.format === 'markdown') {
     let grid = rows.map(row => row.cells.map(cell => cell.raw));
@@ -127,6 +137,13 @@ export function editTable(source: string, table: Table, op: TableOperation): Rep
     const lines = grid.map(row => `|${row.join('|')}|`); lines.splice(1, 0, `|${separator.join('|')}|`);
     return [patch(table.from, table.to, lines.join(source.includes('\r\n') ? '\r\n' : '\n'))];
   }
+  const columnPatches:Replacement[]=[];
+  if(table.columns){
+    const columns=table.columns;
+    if(op.kind==='insertColumn'){const position=op.at===columns.length?columns.at(-1)!.to:columns[op.at].from;columnPatches.push(patch(position,position,'<col>'));}
+    if(op.kind==='deleteColumn'){const column=columns[op.column],last=columns.filter(item=>item.groupFrom===column.groupFrom).length===1;columnPatches.push(patch(last?column.groupFrom:column.from,last?column.groupTo:column.to,''));}
+    if(op.kind==='moveColumn'){const order=move(columns,op.from,op.to);columns.forEach((column,i)=>{if(column!==order[i])columnPatches.push(patch(column.from,column.to,order[i].html));});}
+  }
   switch (op.kind) {
     case 'setCell': { const cell = rows[op.row].cells[op.column]; return [patch(cell.from, cell.to, op.text)]; }
     case 'deleteRow': return [patch(rows[op.row].from, rows[op.row].to, '')];
@@ -137,14 +154,19 @@ export function editTable(source: string, table: Table, op: TableOperation): Rep
       const pos = op.at === op.row ? reference.from : reference.to;
       return [patch(pos, pos, `<tr>${Array(width).fill(`<${tag}></${tag}>`).join('')}</tr>`)];
     }
-    case 'insertColumn': return rows.map(row => { const cell = row.cells[Math.min(op.at, width - 1)]; const pos = op.at === width ? cell.outerTo! : cell.outerFrom!; return patch(pos, pos, `<${cell.tag}></${cell.tag}>`); });
-    case 'deleteColumn': return rows.map(row => patch(row.cells[op.column].outerFrom!, row.cells[op.column].outerTo!, ''));
+    case 'insertColumn': return [...columnPatches,...rows.map(row => { const cell = row.cells[Math.min(op.at, width - 1)]; const pos = op.at === width ? cell.outerTo! : cell.outerFrom!; return patch(pos, pos, `<${cell.tag}></${cell.tag}>`); })];
+    case 'deleteColumn': return [...columnPatches,...rows.map(row => patch(row.cells[op.column].outerFrom!, row.cells[op.column].outerTo!, ''))];
     case 'moveRow': {
       const order = move(rows, op.from, op.to);
       return rows.flatMap((row, i) => row === order[i] ? [] : [patch(row.from, row.to, source.slice(order[i].from, order[i].to))]);
     }
-    case 'moveColumn': return rows.flatMap(row => { const order = move(row.cells, op.from, op.to); return row.cells.flatMap((cell, i) => cell === order[i] ? [] : [patch(cell.outerFrom!, cell.outerTo!, source.slice(order[i].outerFrom!, order[i].outerTo!))]); });
+    case 'moveColumn': return [...columnPatches,...rows.flatMap(row => { const order = move(row.cells, op.from, op.to); return row.cells.flatMap((cell, i) => cell === order[i] ? [] : [patch(cell.outerFrom!, cell.outerTo!, source.slice(order[i].outerFrom!, order[i].outerTo!))]); })];
   }
 }
 
 export function updatedTable(source: string, table: Table, op: TableOperation): string { return applyReplacements(source, editTable(source, table, op)); }
+
+export function newMarkdownTable(rows:number,columns:number):string{
+  if(!Number.isInteger(rows)||!Number.isInteger(columns)||rows<1||columns<1||rows>100||columns>50)throw new Error('请选择 1–100 个数据行、1–50 列。');
+  return [Array.from({length:columns},(_,i)=>` 列 ${i+1} `),Array(columns).fill(' --- '),...Array.from({length:rows},()=>Array(columns).fill(' '))].map(row=>'|'+row.join('|')+'|').join('\n');
+}

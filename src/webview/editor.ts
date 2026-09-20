@@ -2,7 +2,7 @@ import { ChangeSet, EditorState, Transaction } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { defaultKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
-import { editTable, markdownTable, htmlTables, type Table, type TableOperation } from '../shared/tables';
+import { editTable, markdownTable, htmlTables, newMarkdownTable, type Table, type TableOperation } from '../shared/tables';
 import { applyReplacements, minimalEdit } from '../shared/edits';
 import type { Snapshot } from '../shared/protocol';
 import { LiveSync } from '../shared/live-sync';
@@ -11,6 +11,10 @@ import { normalizeSnapshot, hostEdits } from '../shared/line-endings';
 import {livePreview, renderedBlocks, previewMode, previewFocus} from './live-preview';
 import type {Block} from '../shared/render';
 import {findHeading} from '../shared/anchors';
+import {blankLinesBetween} from '../shared/block-spacing';
+import {wikiCompletion} from './wiki-completion';
+import {format,formats,formattingKeys} from './formatting';
+import {loadMermaid} from './mermaid';
 import './editor.css';
 import './document.css';
 import './live-preview.css';
@@ -34,7 +38,9 @@ const recovered = api.getState();
 let mode: 'edit' | 'read' = 'edit';
 let showProperties = false;
 let pendingNavigation: string | undefined;
+let pendingOffset: number | undefined;
 let renderEpoch = 0;
+let pendingCell:{from:number;row:number;column:number}|undefined;
 let mermaidPromise: Promise<any> | undefined;
 let disposeMedia: (()=>void)[]=[];
 const root = document.getElementById('app')!;
@@ -45,6 +51,15 @@ const nav = root.querySelector('nav')!;
 const button = (label: string, onClick: () => void, className = '') => { const node = document.createElement('button'); node.type = 'button'; node.textContent = label; node.className = className; node.addEventListener('click', onClick); return node; };
 const info = (message: string, error = false) => { status.textContent = message; status.classList.toggle('error', error); };
 const remember = () => api.setState({ source:sync.local, baseSource:sync.source, cellRecovery });
+function navigateOffset(offset:number){
+  if(!snapshot){pendingOffset=offset;return;}
+  if(!editor){mode='edit';render();}
+  if(!editor)return;
+  const normalized=hostSource.slice(0,Math.max(0,offset)).replace(/\r\n/g,'\n').length;
+  const changes=ChangeSet.of(minimalEdit(snapshot.source,editor.state.doc.toString()),snapshot.source.length);
+  const pos=changes.mapPos(Math.min(normalized,snapshot.source.length));
+  editor.dispatch({selection:{anchor:pos},effects:[previewFocus.of(true),EditorView.scrollIntoView(pos,{y:'center'})]});editor.focus();
+}
 function navigate(fragment: string) {
   if (editor && snapshot) {
     const destination = snapshot.blocks.find(block => {
@@ -105,7 +120,6 @@ function openDraft(from: number, _to: number) {
   editor?.focus();
 }
 function tableElement(table: Table, html: string): HTMLElement {
-  const tableVersion = snapshot!.version;
   let tableSource = editor?.state.doc.toString() ?? snapshot!.source;
   const wrapper = document.createElement('section'); wrapper.className = 'table-card';
   wrapper.dataset.sourceFrom = String(table.from);
@@ -118,12 +132,19 @@ function tableElement(table: Table, html: string): HTMLElement {
   const caption = document.createElement('span'); caption.textContent = table.format.toUpperCase(); tools.append(caption);
   let rowIndex = table.format === 'markdown' && table.rows.length > 1 ? 1 : 0, columnIndex = 0;
   const targetLabel = document.createElement('span');
-  const refreshTarget = () => { targetLabel.textContent = `第 ${rowIndex + 1} 行 / 第 ${columnIndex + 1} 列`; };
+  const actionButtons:{node:HTMLButtonElement;op:()=>TableOperation}[]=[];
+  const refreshTarget = () => { targetLabel.textContent = `第 ${rowIndex + 1} 行 / 第 ${columnIndex + 1} 列`;for(const action of actionButtons){try{editTable(tableSource,table,action.op());action.node.disabled=false;action.node.title='';}catch(error){action.node.disabled=true;action.node.title=String(error instanceof Error?error.message:error);}} };
   refreshTarget(); tools.append(targetLabel);
   const execute = (op: TableOperation) => {
     if (!snapshot || sync.conflict) return;
     if ((editor?.state.doc.toString() ?? snapshot.source) !== tableSource) { info('表格已变化，请重新选择单元格。', true); return; }
-    try { commit(editTable(tableSource, table, op)); } catch (error) { info(String(error instanceof Error ? error.message : error), true); }
+    try {
+      flushCell?.();
+      const row=op.kind==='insertRow'?op.at:op.kind==='moveRow'?op.to:op.kind==='deleteRow'?Math.min(op.row,table.rows.length-2):rowIndex;
+      const column=op.kind==='insertColumn'?op.at:op.kind==='moveColumn'?op.to:op.kind==='deleteColumn'?Math.min(op.column,table.rows[0].cells.length-2):columnIndex;
+      pendingCell={from:table.from,row:Math.max(0,row),column:Math.max(0,column)};
+      commit(editTable(tableSource, table, op));info('表格已更新，可用 Ctrl+Z 撤销。');
+    } catch (error) { pendingCell=undefined;info(String(error instanceof Error ? error.message : error), true); }
   };
   if (mode === 'edit' && !table.reason && !snapshot?.readonly) {
     const actions: [string, () => TableOperation][] = [
@@ -138,34 +159,46 @@ function tableElement(table: Table, html: string): HTMLElement {
       ['列左移', () => ({ kind: 'moveColumn', from: columnIndex, to: columnIndex - 1 })],
       ['列右移', () => ({ kind: 'moveColumn', from: columnIndex, to: columnIndex + 1 })],
     ];
-    for (const [label, op] of actions) tools.append(button(label, () => execute(op())));
+    for (const [label, op] of actions){const node=button(label,()=>execute(op()));actionButtons.push({node,op});tools.append(node);
+      const highlight=()=>{grid.querySelectorAll('.operation-target').forEach(cell=>cell.classList.remove('operation-target'));if(node.disabled)return;const operation=op();const rowOperation=['insertRow','deleteRow','moveRow'].includes(operation.kind);const cells=rowOperation?grid.querySelectorAll(`[data-cell-row="${rowIndex}"]`):grid.querySelectorAll(`[data-cell-column="${columnIndex}"]`);cells.forEach(cell=>cell.classList.add('operation-target'));};
+      node.addEventListener('mouseenter',highlight);node.addEventListener('focus',highlight);for(const event of ['mouseleave','blur'])node.addEventListener(event,()=>grid.querySelectorAll('.operation-target').forEach(cell=>cell.classList.remove('operation-target')));
+    }
+    refreshTarget();
+    if(table.format==='markdown')tools.append(button('清空表头内容',()=>{const replacements=table.rows[0].cells.reduce((source,_cell,column)=>applyReplacements(source,editTable(source,markdownTable(source,table.from,table.to+source.length-tableSource.length),{kind:'setCell',row:0,column,text:''})),tableSource);commit(minimalEdit(tableSource,replacements));}));
     tools.append(button('删除整表', () => { if (confirm('删除整个表格？可以通过撤销恢复。')) commit([{ from: table.from, to: table.to, expectedText: tableSource.slice(table.from, table.to), insert: '' }]); }, 'danger'));
   }
   tools.append(button('表格源码', () => openDraft(table.from, table.to)));
-  wrapper.append(menu);
+  if(mode==='edit')wrapper.append(menu);
   if (table.reason) { const note = document.createElement('p'); note.textContent = table.reason; wrapper.append(note); }
   const scroll = document.createElement('div'); scroll.className = 'table-scroll';
   const grid = document.createElement('table'); grid.className = 'editable-table';
+  const originalTable=renderedTable.content.querySelector('table');
+  if(originalTable)for(const attribute of originalTable.attributes)if(attribute.name==='class')grid.classList.add(...attribute.value.split(/\s+/).filter(Boolean));else grid.setAttribute(attribute.name,attribute.value);
+  if(table.columns){const group=document.createElement('colgroup');const gutter=document.createElement('col');gutter.style.width='20px';group.append(gutter);grid.append(group);for(const columns of originalTable?.querySelectorAll(':scope > colgroup')??[])grid.append(columns.cloneNode(true));}
   let dragging: { axis: 'row' | 'column'; from: number; version: number; x: number; y: number; moved: boolean } | undefined;
   const canEdit = mode === 'edit' && !snapshot?.readonly && !table.reason;
   const bindDrag = (handle: HTMLElement, axis: 'row' | 'column', index: number) => {
     handle.style.touchAction = 'none';
-    const clear = () => { dragging = undefined; grid.querySelectorAll('.drop-target').forEach(node => node.classList.remove('drop-target')); };
+    let scrollFrame=0,lastPoint={x:0,y:0};
+    const clear = () => { dragging = undefined;cancelAnimationFrame(scrollFrame);scrollFrame=0;window.removeEventListener('blur',clear);grid.querySelectorAll('.drop-target').forEach(node => node.classList.remove('drop-target')); };
+    const autoScroll=()=>{if(!dragging||!handle.isConnected||snapshot?.version!==dragging.version){clear();return;}const bounds=scroll.getBoundingClientRect();if(lastPoint.x>bounds.right-24)scroll.scrollLeft+=12;if(lastPoint.x<bounds.left+24)scroll.scrollLeft-=12;if(lastPoint.y>innerHeight-35)window.scrollBy(0,12);if(lastPoint.y<60)window.scrollBy(0,-12);scrollFrame=requestAnimationFrame(autoScroll);};
     const findTarget = (x: number, y: number) => document.elementFromPoint(x, y)?.closest<HTMLElement>(`[data-drop-axis="${axis}"]`);
     handle.addEventListener('pointerdown', event => {
       if (sync.conflict || event.button !== 0) return;
       event.preventDefault(); handle.focus();
-      dragging = { axis, from: index, version: tableVersion, x: event.clientX, y: event.clientY, moved: false };
+      dragging = { axis, from: index, version: snapshot!.version, x: event.clientX, y: event.clientY, moved: false };
+      window.addEventListener('blur',clear);
       handle.setPointerCapture(event.pointerId);
     });
     handle.addEventListener('pointermove', event => {
       if (!dragging || dragging.axis !== axis) return;
       if (Math.hypot(event.clientX - dragging.x, event.clientY - dragging.y) > 6) dragging.moved = true;
       if (!dragging.moved) return;
+      lastPoint={x:event.clientX,y:event.clientY};if(!scrollFrame)scrollFrame=requestAnimationFrame(autoScroll);
       info(`正在移动第 ${index + 1} ${axis === 'row' ? '行' : '列'}，松开应用，Esc 取消。`);
       grid.querySelectorAll('.drop-target').forEach(node => node.classList.remove('drop-target'));
       const target = findTarget(event.clientX, event.clientY);
-      if (target && grid.contains(target)) target.classList.add('drop-target');
+      if (target && grid.contains(target)){try{editTable(tableSource,table,{kind:axis==='row'?'moveRow':'moveColumn',from:index,to:Number(target.dataset.dropIndex)});target.classList.add('drop-target');}catch{}}
       const bounds = scroll.getBoundingClientRect();
       if (event.clientX > bounds.right - 24) scroll.scrollLeft += 15;
       if (event.clientX < bounds.left + 24) scroll.scrollLeft -= 15;
@@ -175,7 +208,7 @@ function tableElement(table: Table, html: string): HTMLElement {
     handle.addEventListener('pointerup', event => {
       const current = dragging, target = findTarget(event.clientX, event.clientY); clear();
       if (!current?.moved || !target || !grid.contains(target)) return;
-      if (tableSource !== (editor?.state.doc.toString() ?? snapshot?.source)) { info('文档已变化，本次拖动已取消。', true); return; }
+      if (snapshot?.version!==current.version||tableSource !== (editor?.state.doc.toString() ?? snapshot?.source)) { info('文档已变化，本次拖动已取消。', true); return; }
       execute({ kind: axis === 'row' ? 'moveRow' : 'moveColumn', from: current.from, to: Number(target.dataset.dropIndex) });
     });
     handle.addEventListener('pointercancel', clear);
@@ -188,35 +221,45 @@ function tableElement(table: Table, html: string): HTMLElement {
   const handles = document.createElement('tr'); handles.className = 'column-handles'; handles.append(document.createElement('th'));
   table.rows[0]?.cells.forEach((_cell, col) => { const th = document.createElement('th'); const handle = button(`↔ ${col + 1}`, () => { columnIndex = col; refreshTarget(); }); handle.title = `拖动调整第 ${col + 1} 列顺序`; if (canEdit) { bindDrag(handle, 'column', col); bindDrop(th, 'column', col); } th.append(handle); handles.append(th); });
   if (canEdit) grid.append(handles);
+  else if(mode==='read'){handles.querySelectorAll('button').forEach(node=>node.remove());handles.setAttribute('aria-hidden','true');grid.append(handles);}
   table.rows.forEach((row, r) => {
     const tr = document.createElement('tr');
+    for(const attribute of renderedRows[r]?.attributes??[])tr.setAttribute(attribute.name,attribute.value);
     if (canEdit) {
       const th = document.createElement('th'); th.className = 'row-handle';
       const handle = button(`↕ ${r + 1}`, () => { rowIndex = r; refreshTarget(); }); handle.title = `拖动调整第 ${r + 1} 行顺序`;
       if (!(table.format === 'markdown' && r === 0)) { bindDrag(handle, 'row', r); bindDrop(tr, 'row', r); }
+      else {handle.disabled=true;handle.title='Markdown 表头位置固定';}
       th.append(handle); tr.append(th);
+    } else if(mode==='read') {
+      // Reserve the handle gutter so removing controls does not reflow cells.
+      const gutter=document.createElement('th');gutter.className='row-handle';
+      const spacer=document.createElement('span');spacer.style.cssText='display:inline-block;width:20px;height:0';gutter.append(spacer);
+      gutter.setAttribute('aria-hidden','true');tr.append(gutter);
     }
     row.cells.forEach((cell, c) => {
       const td = document.createElement(cell.tag === 'th' || (table.format === 'markdown' && r === 0) ? 'th' : 'td');
+      td.dataset.cellRow=String(r);td.dataset.cellColumn=String(c);
       const renderedCell = renderedRows[r]?.cells[c];
       if (renderedCell) { td.innerHTML = renderedCell.innerHTML; for(const attribute of renderedCell.attributes)td.setAttribute(attribute.name,attribute.value); }
       else td.textContent = cell.raw.trim();
       td.tabIndex = canEdit ? 0 : -1;
       const select = () => { rowIndex = r; columnIndex = c; refreshTarget(); grid.querySelectorAll('.selected-cell').forEach(node => node.classList.remove('selected-cell')); td.classList.add('selected-cell'); };
-      td.addEventListener('focus', select); td.addEventListener('click', select);
+      if(canEdit){td.addEventListener('focus', select); td.addEventListener('click', select);}
       td.addEventListener('contextmenu', event => { if (!canEdit) return; event.preventDefault(); select(); menu.open = true; tools.querySelector('button')?.focus(); });
       if (canEdit) {
         const edit = (point?:{x:number;y:number}) => {
           if (sync.conflict || td.querySelector('.cell-editor')) return;
           flushCell?.();
-          const originalHTML=td.innerHTML,originalValue=table.rows[r].cells[c].raw.trim();
+          const cellText=()=>table.rows[r].cells[c].raw.trim().replace(/<br\s*\/?\s*>/gi,'\n');
+          const originalHTML=td.innerHTML,originalValue=cellText();
           const host=document.createElement('div');host.className='cell-editor';td.replaceChildren(host);
           let finished=false,cellView:EditorView;
           const value=()=>cellView.state.doc.toString();
           const updateCell=()=>{
-            if(composingCell||sync.conflict||finished||value()===table.rows[r].cells[c].raw.trim())return;
+            if(composingCell||sync.conflict||finished||value()===cellText())return;
             try{
-              const changes=editTable(tableSource,table,{kind:'setCell',row:r,column:c,text:value()});
+              const changes=editTable(tableSource,table,{kind:'setCell',row:r,column:c,text:table.format==='html'?value().replace(/\n/g,'<br>'):value()});
               const next=applyReplacements(tableSource,changes),end=table.to+next.length-tableSource.length;
               cellRecovery={source:tableSource,replacements:changes};
               commit(changes);tableSource=next;table=table.format==='markdown'?markdownTable(next,table.from,end):htmlTables(next,table.from,end)[0];remember();
@@ -230,15 +273,16 @@ function tableElement(table: Table, html: string): HTMLElement {
             setTimeout(()=>{if(!wrapper.contains(document.activeElement)&&snapshot?.source===sync.local)editor?.dispatch({effects:renderedBlocks.of(snapshot.blocks)});},0);
           };
           const move=(step:number)=>{
+            if(composingCell||cellView.composing)return;
             const columns=table.rows[0].cells.length,index=r*columns+c+step;
             const target=grid.querySelectorAll<HTMLElement>('td:not(.row-handle),th:not(.row-handle):not(.column-handles th)')[index];
-            finish();if(target){target.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0}));}else editor?.focus();
+            finish();if(target){target.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0}));}else if(step===1&&index===table.rows.length*columns){columnIndex=0;execute({kind:'insertRow',at:table.rows.length,row:table.rows.length-1});}else editor?.focus();
           };
           cellView=new EditorView({parent:host,state:EditorState.create({doc:originalValue,extensions:[
-            markdown(),EditorView.lineWrapping,
+            markdown(),EditorView.lineWrapping,formattingKeys,wikiCompletion(message=>api.postMessage(message)),
             livePreview(()=>document.createElement('span'),true),
             EditorView.contentAttributes.of({'aria-label':`编辑第 ${r+1} 行第 ${c+1} 列`}),
-            keymap.of([{key:'Tab',run:()=>{move(1);return true;}},{key:'Shift-Tab',run:()=>{move(-1);return true;}},{key:'Escape',run:()=>{finish();td.focus();return true;}},{key:'Enter',run:()=>{move(table.rows[0].cells.length);return true;}},...defaultKeymap]),
+            keymap.of([{key:'Tab',run:()=>{move(1);return true;}},{key:'Shift-Tab',run:()=>{move(-1);return true;}},{key:'Escape',run:()=>{finish();td.focus();return true;}},{key:'Shift-Enter',run:view=>{if(composingCell||view.composing)return false;view.dispatch(view.state.replaceSelection('\n'));return true;}},{key:'Enter',run:view=>{if(composingCell||view.composing)return false;finish();td.focus();return true;}},...defaultKeymap]),
             EditorView.updateListener.of(update=>{if(update.docChanged)updateCell();}),
             EditorView.domEventHandlers({
               compositionstart:()=>{composingCell=true;},
@@ -262,6 +306,7 @@ function tableElement(table: Table, html: string): HTMLElement {
     grid.append(tr);
   });
   scroll.append(grid); wrapper.append(scroll);
+  if(pendingCell?.from===table.from){const target=pendingCell;pendingCell=undefined;requestAnimationFrame(()=>{if(wrapper.isConnected)grid.querySelector<HTMLElement>(`[data-cell-row="${target.row}"][data-cell-column="${target.column}"]`)?.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0}));});}
   if (canEdit) {
     const addRow = button('+', () => execute({ kind: 'insertRow', at: table.rows.length, row: table.rows.length - 1 }), 'edge-add add-row'); addRow.setAttribute('aria-label', '末尾添加行'); addRow.title = '添加行';
     const addColumn = button('+', () => execute({ kind: 'insertColumn', at: table.rows[0].cells.length }), 'edge-add add-column'); addColumn.setAttribute('aria-label', '末尾添加列'); addColumn.title = '添加列';
@@ -275,7 +320,7 @@ function enhance(body: HTMLElement) {
   const epoch = renderEpoch;
     for (const code of body.querySelectorAll<HTMLElement>('code.language-mermaid')) {
       const source = code.textContent ?? '';
-      mermaidPromise ??= import('mermaid').then(module => { module.default.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true }); return module.default; });
+      mermaidPromise ??= loadMermaid(document.body.classList.contains('vscode-dark')||document.body.classList.contains('vscode-high-contrast'));
       void mermaidPromise.then(async mermaid => {
         try { const { svg } = await mermaid.render(`diagram-${crypto.randomUUID()}`, source); if (epoch === renderEpoch && code.isConnected) {
           const target = document.createElement('div'); target.className = 'mermaid-diagram'; target.innerHTML = svg;
@@ -295,7 +340,7 @@ function blockElement(block: Block, view?: EditorView): HTMLElement {
   const currentSource = view?.state.doc.toString() ?? editor?.state.doc.toString() ?? snapshot!.source;
   const tables = block.kind === 'table' ? [markdownTable(currentSource,block.from,block.to)] : block.kind === 'html' ? htmlTables(currentSource,block.from,block.to) : [];
   const isolated = tables.length === 1 && currentSource.slice(block.from,block.to).trim() === currentSource.slice(tables[0].from,tables[0].to).trim();
-  if (isolated && !tables[0].reason && mode === 'edit') return tableElement(tables[0],block.html);
+  if (isolated && !tables[0].reason) return tableElement(tables[0],block.html);
   const section = document.createElement('section'); section.className = 'note-block live-block';
   const body = document.createElement('div'); body.className = 'rendered'; body.innerHTML = block.html; section.append(body);
   for (const task of body.querySelectorAll<HTMLInputElement>('li[data-task-offset] > input[type="checkbox"],li[data-task-offset] > p > input[type="checkbox"]')) {
@@ -322,12 +367,24 @@ function navigation() {
     button('保存', () => request('save'))
   );
   nav.append(button('导出 PDF',()=>request('exportPdf')));
+  if(mode==='edit'&&!snapshot?.readonly&&!sync.conflict){
+    const formatting=document.createElement('details');const summary=document.createElement('summary');summary.textContent='格式';formatting.append(summary);
+    for(const [kind,label]of formats)formatting.append(button(label,()=>{const view=EditorView.findFromDOM(document.activeElement as HTMLElement)??editor;if(view)format(view,kind);}));
+    nav.append(formatting,button('插入表格',insertTable));
+  }
   nav.append(button(showProperties?'隐藏属性':'显示属性',()=>{
     showProperties=!showProperties;
     if(mode==='read') render();
     else {content.classList.toggle('hide-properties',!showProperties);editor?.requestMeasure();navigation();}
   }));
-  if (sync.conflict) nav.append(button('复制保留的编辑内容', () => { void navigator.clipboard.writeText(sync.local); }));
+  if (sync.conflict) nav.append(button('对比冲突内容',()=>api.postMessage({type:'compare',source:sync.local})),button('另存本地草稿',()=>api.postMessage({type:'recover',source:sync.local})),button('采用外部版本',()=>{if(!confirm('采用外部版本将放弃当前未同步草稿。请先对比或另存草稿。'))return;sync.pending=undefined;sync.conflict=false;sync.local=sync.source;cellRecovery=undefined;remember();render();info('已载入外部版本。');}),button('复制保留的编辑内容', () => { void navigator.clipboard.writeText(sync.local); }));
+}
+function insertTable(){
+  if(!editor||sync.conflict||snapshot?.readonly)return;
+  flushCell?.();const view=editor,position=view.state.selection.main.head;
+  const dialog=document.createElement('dialog');dialog.className='insert-table-dialog';
+  dialog.innerHTML='<form method="dialog"><strong>插入 Markdown 表格</strong><label>数据行数<input name="rows" aria-label="数据行数" type="number" min="1" max="100" value="3" required></label><label>列数<input name="columns" aria-label="列数" type="number" min="1" max="50" value="3" required></label><p>表头另计一行。</p><button value="cancel" formnovalidate>取消</button><button value="insert">插入</button></form>';
+  document.body.append(dialog);dialog.addEventListener('close',()=>{if(dialog.returnValue==='insert'&&editor===view){try{const rows=Number(dialog.querySelector<HTMLInputElement>('[name="rows"]')!.value),columns=Number(dialog.querySelector<HTMLInputElement>('[name="columns"]')!.value);const source=view.state.doc.toString(),line=view.state.doc.lineAt(position),at=line.to,insert='\n\n'+newMarkdownTable(rows,columns)+'\n\n';pendingCell={from:at+2,row:1,column:0};commit([{from:at,to:at,insert,expectedText:''}]);}catch(error){info(String(error),true);}}dialog.remove();view.focus();});dialog.showModal();
 }
 function render() {
   if (!snapshot) return;
@@ -345,7 +402,7 @@ function render() {
     editor = new EditorView({
       parent:content,
       state:EditorState.create({doc:sync.local,selection:{anchor:Math.min(savedSelection.anchor,sync.local.length),head:Math.min(savedSelection.head,sync.local.length)},extensions:[
-        markdown(), keymap.of([
+        markdown(), formattingKeys,wikiCompletion(message=>api.postMessage(message)),keymap.of([
           ...(['Home','End'] as const).map(key=>({key,run:(view:EditorView)=>{const line=view.state.doc.lineAt(view.state.selection.main.head);view.dispatch({selection:{anchor:key==='Home'?line.from:line.to},scrollIntoView:true});return true;},shift:(view:EditorView)=>{const selection=view.state.selection.main,line=view.state.doc.lineAt(selection.head);view.dispatch({selection:{anchor:selection.anchor,head:key==='Home'?line.from:line.to},scrollIntoView:true});return true;}})),
           ...defaultKeymap,
         ]), EditorView.lineWrapping,
@@ -366,9 +423,15 @@ function render() {
     });
     editor.dispatch({ effects:[previewMode.of(!sourceMode),renderedBlocks.of(sync.local === snapshot.source ? snapshot.blocks : [])] });
   } else {
+    const reading=document.createElement('div');reading.className='reading-document';content.append(reading);
+    let previousEnd=0;
     for (const block of snapshot.blocks) {
+      const gap=blankLinesBetween(snapshot.source,previousEnd,block.from,previousEnd===0);
+      if(gap){const spacer=document.createElement('div');spacer.className='reading-gap';spacer.style.height=`${gap*10}px`;spacer.setAttribute('aria-hidden','true');reading.append(spacer);}
+      previousEnd=block.to;
       if ((block.kind === 'yaml' && !showProperties) || ['definition','footnoteDefinition'].includes(block.kind)) continue;
-      content.append(blockElement(block));
+      const wrapper=document.createElement('div');wrapper.className='live-widget';
+      wrapper.append(blockElement(block));reading.append(wrapper);
     }
   }
   if (pendingNavigation) { navigate(pendingNavigation); pendingNavigation=undefined; }
@@ -395,14 +458,16 @@ function receive(message: Snapshot) {
     if (result === 'external') editor.dispatch({changes:minimalEdit(editor.state.doc.toString(),message.source),annotations:Transaction.remote.of(true)});
     if (sync.local === message.source) editor.dispatch({effects:renderedBlocks.of(message.blocks)});
   } else if (mode === 'read') render();
-  if (sync.conflict) { info('检测到外部修改，当前编辑内容已保留，未覆盖磁盘文档。请从笔记菜单复制保留内容后重新打开核对。',true); navigation(); }
+  if (sync.conflict) { info('检测到外部修改，当前草稿已保留。请从笔记菜单对比内容、另存草稿或采用外部版本。',true); navigation(); }
   else if (result === 'ack') { info(''); flush(); }
   remember();
+  if(pendingOffset!==undefined){const offset=pendingOffset;pendingOffset=undefined;navigateOffset(offset);}
 }
 window.addEventListener('message',event => {
   const message=event.data;
   if(message?.type==='preview')floatingPreview.receive(message);
   else if(message?.type==='requestExportPdf')request('exportPdf');
+  else if(message?.type==='navigateOffset'&&Number.isInteger(message.offset))navigateOffset(message.offset);
   else if(message?.type==='settings'){floatingPreview.enabled=message.blockPreview;floatingPreview.update(editor,mode==='edit'&&!sourceMode);}
   else if (message?.type === 'snapshot') receive(message);
   else if (message?.type === 'navigate' && typeof message.fragment === 'string') { if (snapshot) navigate(message.fragment); else pendingNavigation=message.fragment; }

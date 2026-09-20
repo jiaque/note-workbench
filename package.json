@@ -3,7 +3,7 @@
   "displayName": "Note Workbench — Obsidian-style Editor",
   "icon": "media/icon.png",
   "description": "Obsidian-style Markdown editing in VS Code with live preview, note graphs, editable tables, Markdown/HTML rendering and PDF export.",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "publisher": "jiaque",
   "author": "jiaque",
   "repository": {
@@ -45,6 +45,29 @@
     "configuration": {
       "title": "Note Workbench",
       "properties": {
+        "noteWorkbench.notes.newLocation": {
+          "type": "string",
+          "enum": [
+            "current",
+            "root",
+            "folder"
+          ],
+          "default": "current",
+          "scope": "resource",
+          "description": "缺失笔记的创建目录：current 为当前笔记目录，root 为工作区根目录，folder 使用自定义目录。链接中明确指定路径时优先使用链接路径。"
+        },
+        "noteWorkbench.notes.newFolder": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "新笔记自定义目录，相对于当前笔记库根目录。"
+        },
+        "noteWorkbench.render.remoteImages": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "允许加载 HTTPS 远程图片；关闭后仅允许笔记库内及 data 图片。适用于编辑、阅读、浮层和 PDF。修改后重新打开笔记生效。"
+        },
         "noteWorkbench.pdf.browserPath": {
           "type": "string",
           "default": "",
@@ -95,7 +118,7 @@
             "filenamePattern": "*.md"
           }
         ],
-        "priority": "option"
+        "priority": "default"
       }
     ],
     "commands": [
@@ -160,10 +183,12 @@
     "verify:package": "vsce ls --tree"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "6.20.3",
     "@codemirror/commands": "6.11.1",
     "@codemirror/lang-markdown": "6.5.2",
     "@codemirror/state": "6.7.5",
     "@codemirror/view": "6.43.12",
+    "@mermaid-js/mermaid-zenuml": "1.0.1",
     "d3-force": "3.0.0",
     "lucide": "0.577.0",
     "mermaid": "12.0.0",

@@ -25,5 +25,5 @@ test('block preview chooses full callout context and excludes table editing',()=
 
 test('graph resolves escaped table aliases and Windows/file URI links within indexed notes',()=>{
   const notes=[{id:'file:///D:/vault/A.md',name:'A.md',path:'A.md',source:'| link |\n|---|\n| [[B\\|label]] |\n\n<a href="file:///d:/vault/B.md">B</a>\n\n<a href="D:\\vault\\B.md">B</a>'},{id:'file:///D:/vault/B.md',name:'B.md',path:'B.md',source:''}];
-  const result=buildGraph(notes);assert.equal(result.nodes.length,2);assert.deepEqual(result.links,[{source:notes[0].id,target:notes[1].id}]);
+  const result=buildGraph(notes);assert.equal(result.nodes.length,2);assert.deepEqual(result.links.map(({source,target})=>({source,target})),[{source:notes[0].id,target:notes[1].id}]);assert.equal(result.links[0].occurrences?.length,3);
 });

@@ -3,7 +3,7 @@ import { readFile, realpath, readdir } from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import { resolve, extname, dirname, relative, isAbsolute } from 'node:path';
 import renderer from '../dist/preview-render.cjs';
-const { renderDocument, hydrateResources, buildGraph } = renderer;
+const { renderDocument, hydrateResources, buildGraph,wikiCompletions } = renderer;
 let graphLayout={};
 const root = resolve('dist/webview');
 const sourceFile=resolve(process.env.NOTE_WORKBENCH_PREVIEW_FILE || 'test/fixtures/vault/Welcome.md'), vault=dirname(sourceFile);
@@ -53,6 +53,10 @@ const server = createServer(async (request, response) => {
     if (url.pathname === '/message' && request.method === 'POST') {
       let body = ''; for await (const chunk of request) { body += chunk; if (body.length > 2_000_000) throw new Error('Request too large'); }
       const message = JSON.parse(body), output = [];
+      if(message.type==='complete'){
+        const notes=[];for(const name of await readdir(vault))if(name.endsWith('.md')){const file=resolve(vault,name);notes.push({id:pathToFileURL(file).href,name,path:name,source:file===sourceFile?source:await readFile(file,'utf8')});}
+        output.push({type:'completions',requestId:message.requestId,options:wikiCompletions(notes,pathToFileURL(sourceFile).href,message.query)});
+      }
       if(message.type==='preview') {const rendered=await renderSource(message.source,message);output.push({type:'preview',requestId:message.requestId,html:rendered.blocks.map(block=>block.html).join('')});}
       if (message.type === 'ready') output.push(await snapshot());
       if (message.type === 'edit') {

@@ -1,16 +1,15 @@
 import * as vscode from 'vscode';
 import {randomBytes} from 'node:crypto';
-import {buildGraph,type GraphNote,type GraphData} from './shared/graph';
+import {buildGraph,type GraphData} from './shared/graph';
+import {NoteIndex} from './note-index';
 export class GraphProvider implements vscode.WebviewViewProvider,vscode.Disposable {
   private views=new Set<vscode.Webview>();private subscriptions:vscode.Disposable[]=[];
   private timer?:ReturnType<typeof setTimeout>;private revision=0;
   private data:GraphData={nodes:[],links:[]};private current?:string;
-  constructor(private context:vscode.ExtensionContext){
-    const watcher=vscode.workspace.createFileSystemWatcher('**/*.md');
-    this.subscriptions.push(watcher,watcher.onDidCreate(()=>this.refresh()),watcher.onDidChange(()=>this.refresh()),watcher.onDidDelete(()=>this.refresh()),
-      vscode.workspace.onDidChangeTextDocument(event=>{if(event.document.languageId==='markdown')this.refresh();}),
-      vscode.workspace.onDidCloseTextDocument(()=>this.refresh()),
-      vscode.workspace.onDidChangeConfiguration(event=>{if(event.affectsConfiguration('noteWorkbench.graph'))this.refresh();}),
+  navigate?:(id:string,offset?:number)=>Promise<void>;
+  createMissing?:(origin:string,target:string)=>Promise<void>;
+  constructor(private context:vscode.ExtensionContext,private index:NoteIndex){
+    this.subscriptions.push(index.onDidChange(()=>this.publish()),
       vscode.window.onDidChangeActiveTextEditor(editor=>{if(editor?.document.languageId==='markdown')this.setActive(editor.document.uri);})
     );
   }
@@ -24,25 +23,24 @@ export class GraphProvider implements vscode.WebviewViewProvider,vscode.Disposab
     this.views.add(webview);
     const messages=webview.onDidReceiveMessage(async message=>{
       if(message?.type==='ready'){await webview.postMessage({type:'layout',value:this.context.workspaceState.get('graph.layout',{})});this.refresh();}
-      if(message?.type==='open'&&typeof message.id==='string'&&this.data.nodes.some(n=>n.id===message.id&&!n.missing))await vscode.commands.executeCommand('vscode.openWith',vscode.Uri.parse(message.id),'noteWorkbench.editor');
+      if(message?.type==='open'&&typeof message.id==='string'&&this.data.nodes.some(n=>n.id===message.id&&!n.missing)){
+        const offset=Number.isInteger(message.offset)&&this.data.links.some(link=>link.source===message.id&&link.occurrences?.some(item=>item.offset===message.offset))?message.offset:undefined;
+        if(this.navigate)await this.navigate(message.id,offset);
+      }
+      if(message?.type==='open'&&typeof message.id==='string'){
+        const node=this.data.nodes.find(n=>n.id===message.id&&n.missing),origin=this.data.links.find(link=>link.target===message.id&&link.source===this.current)?.source??this.data.links.find(link=>link.target===message.id)?.source;
+        if(node&&origin)await this.createMissing?.(origin,node.path);
+      }
       if(message?.type==='layout'&&message.value&&JSON.stringify(message.value).length<10000)await this.context.workspaceState.update('graph.layout',message.value);
       if(message?.type==='expand')this.open();
-      if(message?.type==='refresh')this.refresh();
+      if(message?.type==='refresh'){this.index.refresh();this.refresh();}
     });
     onDispose(()=>{messages.dispose();this.views.delete(webview);});this.refresh();
   }
   refresh(){clearTimeout(this.timer);this.timer=setTimeout(()=>{void this.scan();},200);}
   private async scan(){
-    const revision=++this.revision,config=vscode.workspace.getConfiguration('noteWorkbench.graph');
-    try{
-      const include=config.get<string[]>('include',[]),exclude=config.get<string[]>('exclude',['**/{node_modules,.git,.npm-cache}/**']);
-      const files=new Map<string,vscode.Uri>();
-      for(const pattern of include.length?include:['**/*.md'])for(const uri of await vscode.workspace.findFiles(pattern,exclude.length===1?exclude[0]:exclude.length?'{'+exclude.join(',')+'}':null))if(uri.path.endsWith('.md'))files.set(uri.toString(),uri);
-      const notes:GraphNote[]=[];
-      for(const [id,uri]of files){const open=vscode.workspace.textDocuments.find(doc=>doc.uri.toString()===id);const source=open?open.getText():Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');notes.push({id,source,name:uri.path.split('/').pop()!,path:vscode.workspace.asRelativePath(uri)});}
-      if(revision!==this.revision)return;
-      this.data=buildGraph(notes,this.current);for(const view of this.views)void view.postMessage({type:'graph',...this.data});
-    }catch(error){for(const view of this.views)void view.postMessage({type:'error',message:String(error)});}
+    await this.index.ensure();this.publish();
   }
+  private publish(){this.data=buildGraph(this.index.notes,this.current);for(const view of this.views)void view.postMessage({type:'graph',...this.data});}
   dispose(){clearTimeout(this.timer);this.revision++;this.subscriptions.forEach(s=>s.dispose());}
 }

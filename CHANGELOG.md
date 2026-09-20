@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.4 — 2026-09-20
+
+- Register Note Workbench as a default editor candidate for Markdown; existing user editor associations retain precedence.
+- Preserve source blank-line spacing in reading view and share Live Preview block containers and table layout, without editing controls.
+- Add Wiki note/alias/heading/block completion, missing-note creation, ambiguity selection and backlink occurrence navigation.
+- Cache note contents and parsed link metadata for incremental graph updates, with progress and cancellation.
+- Add table insertion, last-cell Tab append, Shift+Enter line breaks, disabled invalid actions and HTML colgroup edits.
+- Add formatting actions and shortcuts, native undo/redo without source-view switching, and conflict comparison/recovery choices.
+- Add a remote-image setting for note views and PDF, and bundle the official ZenUML renderer.
+
 ## 0.5.3 — 2026-09-18
 
 - Add a dedicated note-and-graph icon for the extension listing.
