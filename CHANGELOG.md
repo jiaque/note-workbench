@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 — 2026-09-20
 
 - Fix local development update white screens caused by missing hashed JavaScript chunks. Add `npm run sync:dev` to copy and verify the complete build while preserving the development extension identity.
 
@@ -9,6 +9,7 @@
 - Add document find in Live Preview, Reading and Source with Ctrl/Cmd+F, next/previous navigation, result counts, case matching and highlights.
 - Search full source in editing views and rendered text in Reading; reveal table matches and folded reading content without changing the document.
 - Keep search-input undo separate from document undo. Add literal/Unicode search tests and a real-browser regression (`npm run test:find`).
+- Provide English and Chinese READMEs, a fictional example notebook and screenshots of Live Preview, tables and the graph.
 
 ## 0.5.7 — 2026-09-20
 
