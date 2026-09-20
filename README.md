@@ -1,145 +1,169 @@
 # Note Workbench — Obsidian-style Editor
 
-<img src="media/icon.png" alt="Note Workbench" width="96" height="96">
+<img src="media/icon.png" alt="Note Workbench icon" width="96" height="96">
 
-在 VS Code 中使用 Obsidian 风格的实时编辑、笔记连接图与 Markdown/HTML 混排。支持块预览浮层和表格原位编辑，让笔记阅读、修改和关系浏览在同一个工作区完成。
+**Read, edit and connect Markdown notes inside VS Code.**
 
-本项目为独立开发的 VS Code 扩展，非 Obsidian 官方产品，未获其官方背书；运行时无需安装 Obsidian 或 Obsidian Visualizer。Obsidian 名称及相关商标归其各自权利人所有。
+[简体中文](README.zh-CN.md) · [Install](https://marketplace.visualstudio.com/items?itemName=jiaque.note-workbench) · [Examples](example/README.md) · [Issues](https://github.com/jiaque/note-workbench/issues)
 
-使用 TypeScript 开发，当前为 **0.5.7 开发预览，不是需求文档中的完整首版**。
+Obsidian-style Live Preview, editable tables and a note graph in your existing workspace. Mix Markdown with supported HTML, preview the block you are editing, and keep your notes in ordinary `.md` files.
 
-## 界面语言 / Interface language
+**Phase 1 feature development is complete under the agreed scope.** Follow-up improvements and remaining validation are tracked in [Phase 1 scope](docs/phase-one.md).
 
-在 VS Code 设置中搜索 `noteWorkbench.language`：
+## See it in action
 
-- `auto`（默认）：跟随 VS Code 当前界面语言。中文使用简体中文，其他语言回退英文。
-- `zh-CN`：始终使用简体中文。
-- `en`：始终使用 English。
+### Edit with a live block preview
 
-修改后运行 **Developer: Reload Window（开发人员：重新加载窗口）** 生效。翻译覆盖笔记菜单、表格操作、块预览浮层、连接图、PDF 控件以及插件提示；不会翻译或改写笔记正文、文件名、用户属性和链接。
+Click into a block to edit its source while a floating preview shows the result. Other blocks keep their rendered appearance.
 
-VS Code 设置说明、命令面板名称和侧栏标题由 VS Code 的语言包机制加载，始终跟随 VS Code 界面语言，不受插件单独语言设置影响。默认读取的是 VS Code 的语言，不是远程开发服务器的操作系统语言。参见 [VS Code API](https://code.visualstudio.com/api/references/vscode-api#env.language)。
+![Live Preview and floating block preview](docs/images/live-preview.jpg)
 
-**English:** Search for `noteWorkbench.language` in Settings. Choose `auto` to follow VS Code, `en` for English, or `zh-CN` for Simplified Chinese, then run **Developer: Reload Window**. Unsupported VS Code languages fall back to English. Note contents remain unchanged. Settings descriptions, command titles and the sidebar view name follow VS Code's display language independently of this setting.
+Try [example/Welcome.md](example/Welcome.md).
 
-## CSS 动效与动态 SVG
+### Work directly in tables
 
-在设置中搜索 `noteWorkbench.render.motion.enabled`，可开启或关闭动效，**默认开启**，同时遵循系统的减少动态效果偏好，修改立即生效。普通文档不会自动添加动效；使用 `data-nw-effect` 显式启用。
+Edit cells, add or remove rows and columns, and drag handles to reorder ordinary Markdown and HTML tables.
 
-```html
-<div data-nw-effect="breathe" data-nw-hover="lift"
-     style="--nw-duration:2s;--nw-color:#2563eb;padding:16px;border-radius:8px;">
-  呼吸光晕，悬停上浮
-</div>
+![Markdown and HTML table editing](docs/images/tables.jpg)
 
-<div data-nw-effect="progress-striped" style="--nw-progress:65%;--nw-color:#22c55e;">
-  已完成 65%
-</div>
-```
+Try [example/Tables.md](example/Tables.md).
 
-提供呼吸、流光、入场、悬停、进度和等待等 34 个预设。笔记菜单可暂停/恢复动效和重播 SVG；关闭动效时仍显示正文及正确进度。
+### Follow the connections
 
-支持直接手写 SVG，并在点击后编辑源码、通过浮层查看结果。SVG 经受限过滤后按独立图片显示，支持 CSS 关键帧及声明式动画，不执行笔记脚本、不提供图内鼠标交互。本地 `.svg` 图片引用使用同样的过滤链路。PDF 输出静态基础态；作者应保证基础态可读。
+Explore global and local graphs, navigate notes, and find backlinks with source context.
 
-完整参数与范围见[动效设计](docs/css-motion-design.md)，实际验证及限制见[0.5.5 实现记录](docs/motion-implementation.md)。示例文件：[Effects.md](test/fixtures/vault/Effects.md)。
+![Graph of the fictional Atlas notebook](docs/images/graph.jpg)
 
-## 从 VS Code 扩展商店安装
+Try the linked notes in [example/](example/README.md). These screenshots use purpose-written, fictional content in the extension's local webview preview. They contain no customer documents and do not show the VS Code window chrome.
 
-需要 VS Code **1.100.0 或更新版本**。
+## Install and get started
 
-1. 打开 VS Code，点击左侧的 **扩展** 图标，或按 `Ctrl+Shift+X`（macOS：`Cmd+Shift+X`）。
-2. 搜索 **Note Workbench**，找到 **Note Workbench — Obsidian-style Editor**。也可以输入 `@id:jiaque.note-workbench` 精确查找。
-3. 点击 **安装**，按 VS Code 提示完成安装。
-4. 打开你的笔记文件夹，点击 `.md` 文件即可默认进入 Note Workbench 实时预览（从 0.5.4 起）。
+Requires **VS Code 1.100.0+**. Using the packaged extension does not require Node.js, npm, Obsidian or Obsidian Visualizer.
 
-如果你以前指定过其他默认 Markdown 编辑器，或安装了多个默认候选编辑器，VS Code 会保留已有选择或要求选择一次。可在标签页右键的 **重新打开编辑器的方式… → 配置默认编辑器…** 中选择 **Note Workbench**。也可将以下条目合并到设置里的 `workbench.editorAssociations`：`"*.md": "noteWorkbench.editor"`。需要查看原始文本时，使用笔记菜单的 **VS Code 源码**。
+1. Open **Extensions** and search for `@id:jiaque.note-workbench`.
+2. Install **Note Workbench — Obsidian-style Editor** by **jiaque**.
+3. Open your notes folder, then open a `.md` file.
+4. Click the **Note Workbench** activity-bar icon to open the graph.
 
-默认候选行为遵循 [VS Code Custom Editor API](https://code.visualstudio.com/api/extension-guides/custom-editors#contribution-point)，不会在安装时覆盖你已有的编辑器偏好。
+You can also [open the Marketplace listing](https://marketplace.visualstudio.com/items?itemName=jiaque.note-workbench) or run:
 
-也可以打开 [Visual Studio Marketplace 扩展页面](https://marketplace.visualstudio.com/items?itemName=jiaque.note-workbench)，或在已配置 `code` 命令的终端中执行：
-
-```shell
+```sh
 code --install-extension jiaque.note-workbench
 ```
 
-安装后，点击左侧活动栏的 **Note Workbench** 图标可查看笔记连接图。已打开的 Markdown 文件也可以通过标签页右键菜单中的 **重新打开编辑器的方式… → Note Workbench** 切换编辑器。
+The extension registers as a default Markdown editor candidate. VS Code preserves an existing editor preference: right-click the file tab and choose **Reopen Editor With → Configure default editor → Note Workbench** to change it. Use **⋯ → Edit in VS Code** for the native source editor.
 
-如果暂时搜索不到，请先使用完整扩展 ID 查询或打开上面的商店链接；仍在审核中的版本需要等待商店验证完成。安装操作说明可参考 [VS Code 官方扩展文档](https://code.visualstudio.com/docs/configure/extensions/extension-marketplace)。
+For a walkthrough, download or clone this repository, open the entire [example](example/README.md) folder in VS Code, and start with [Welcome.md](example/Welcome.md). Wiki links and embeds work in the extension, not GitHub's Markdown viewer.
 
-## 本地开发运行
+## Core features
 
-```powershell
+| Area | Included |
+| --- | --- |
+| Editing | Live Preview, reading/source views, optional floating block preview, save, Auto Save and native undo/redo |
+| Markdown and HTML | CommonMark/GFM, supported HTML, callouts, highlighting, comments, footnotes, code highlighting and YAML properties |
+| Equations and diagrams | Locally bundled MathJax and Mermaid, with source editing and rendering |
+| Linked notes | Wiki links, aliases, heading/block links, completion, missing-note creation, whole-note/heading/block embeds |
+| Graph | Global/local views, backlinks, filtering, zoom/pan, dragging and remembered layout controls |
+| Tables | Cell editing, row/column insertion and deletion, drag reordering, keyboard navigation and new Markdown tables |
+| Attachments | Local images, configurable HTTPS images, audio/video and embedded PDF navigation |
+| PDF export | Supported styling, equations, diagrams, images and note embeds, using an installed Chrome or Edge |
+| Presentation | Vault CSS, explicit CSS motion presets and isolated animated SVG images |
+| Languages | English and Simplified Chinese; follows VS Code by default |
+
+Reading and Live Preview share the document and table layout. Source remains the stored representation: table edits do not convert the whole note to another format.
+
+## Everyday actions
+
+The **⋯** menu contains view switching, table insertion, properties, PDF export, motion controls and saving. Formatting buttons are intentionally omitted.
+
+| Action | Shortcut or control |
+| --- | --- |
+| Save | `Ctrl/Cmd+S`; also respects VS Code Auto Save |
+| Switch editing/reading | `Ctrl/Cmd+E` |
+| Bold / italic | `Ctrl/Cmd+B` / `Ctrl/Cmd+I` |
+| Link / strikethrough | `Ctrl/Cmd+K` / `Ctrl/Cmd+Shift+X` |
+| Next / previous table cell | `Tab` / `Shift+Tab` |
+| Finish cell edit / cell line break | `Enter` / `Shift+Enter` |
+| Append a table row | `Tab` from the final cell, or the bottom `+` |
+| Reorder rows or columns | Edge handles or the table menu |
+| Complete a note / heading / block | `[[`, `[[Note#` or `[[Note#^` |
+
+Leaving an edited block syncs changes to the VS Code document. Writing to disk follows Auto Save or explicit saving. External conflicts expose compare, draft recovery and external-version actions in the note menu.
+
+Use ordinary Markdown syntax for headings, quotes, inline code and lists; more one-step formatting shortcuts are deferred. Missing-note links offer a creation choice before creating a file.
+
+## Settings
+
+Search for `noteWorkbench` in Settings. Options appear in this order:
+
+| Setting (`noteWorkbench.` prefix) | Default | Purpose |
+| --- | --- | --- |
+| `language` | `auto` | Follow VS Code, or choose `zh-CN` / `en`; reload the window after changing |
+| `editor.blockPreview.enabled` | `true` | Floating preview for non-table blocks |
+| `render.motion.enabled` | `true` | Motion; respects reduced-motion preferences; applies immediately |
+| `render.remoteImages` | `true` | Allow HTTPS images; reopen the note after changing |
+| `styleSheets` | `[]` | Vault-relative CSS files, in order; reopen after changing |
+| `notes.newLocation` | `current` | Current folder, vault `root`, or custom `folder` |
+| `notes.newFolder` | Empty | Vault-relative folder for the `folder` option |
+| `graph.include` | `[]` | Include globs; empty means all Markdown notes |
+| `graph.exclude` | `**/{node_modules,.git,.npm-cache}/**` | Exclude globs |
+| `pdf.browserPath` | Empty | Chrome/Edge executable; empty enables automatic detection |
+
+Auto uses Simplified Chinese for Chinese VS Code locales and English for other locales. Settings descriptions, command names and the sidebar title always follow VS Code's language, independently of the extension override. Note content is never translated.
+
+## CSS motion and SVG
+
+Enable motion explicitly on a block:
+
+```html
+<div data-nw-effect="progress-striped"
+     style="--nw-progress:60%;--nw-color:#2563eb;">
+  Example plan: 60% complete
+</div>
+```
+
+There are 34 presets across continuous, entrance and hover effects. Use **⋯ → Motion controls** to pause/resume or replay SVG. Disabling motion retains static content and progress values.
+
+Write SVG directly in a note: supported CSS/SMIL animations play in an isolated image after filtering. SVG scripts and interactive controls inside the image are not supported. PDF uses the static base appearance.
+
+Try [example/Motion.md](example/Motion.md). Full parameters and boundaries: [motion design](docs/css-motion-design.md) and [implementation notes](docs/motion-implementation.md) (Chinese).
+
+## Scope and limitations
+
+- **Tables:** merged, nested/irregular HTML tables and tables inside mixed HTML containers use source editing. Visual merge/split, cross-table paste and column-width dragging are not included.
+- **HTML:** tags, styles and URLs are filtered for display. Arbitrary scripts do not run; Markdown is not recursively parsed inside every HTML container.
+- **PDF:** needs local Chrome/Edge. Attached PDFs and audio/video become text notices, not merged pages or playable media. Check unusually wide tables and custom print layouts.
+- **Workspace:** Windows desktop with a local folder is the primary target. Large-file optimization, multi-root/remote/web validation and query features are outside the completed phase.
+- **Validation:** automated and host checks cover specific scenarios. Full real-IME, multi-window recovery, keyboard/accessibility, theme/zoom and performance validation remain open.
+
+See [Phase 1 scope and follow-up work](docs/phase-one.md). This is not a promise of compatibility with every Obsidian plugin or theme.
+
+## Develop locally
+
+Development requires **Node.js 22+ and npm**.
+
+```sh
 npm ci
 npm run typecheck
 npm test
 npm run build
 ```
 
-在 VS Code 中打开本项目文件夹，按 F5 运行“运行 Note Workbench”。新窗口默认打开合成样本笔记库 `test/fixtures/vault`。右键 `.md` 文件，选择 **Note Workbench: 打开笔记编辑器**，或通过“重新打开编辑器的方式”选择 Note Workbench。
+Open the repository in VS Code and press **F5** to launch the development host. Its default workspace uses synthetic test fixtures; the public walkthrough is in [example/](example/README.md).
 
-用户使用打包后的扩展不需要 Node.js/npm，不需要额外服务。`npm run preview` 仅供开发者在浏览器验证界面；它使用内存样本，不会保存笔记文件，也不代表完整 VS Code 宿主行为。
-
-## 这个开发预览包含什么
-
-- 独立自定义 Markdown 编辑器与活动栏连接图，支持全局/局部图、反向链接、四边停靠和参数记忆。
-- Markdown/GFM、HTML 样式和静态 SVG；完整 Callout 类型、Wiki 链接、标题/块嵌入、高亮、注释、脚注、代码高亮、公式和 Mermaid。
-- 图片尺寸、音视频、离线 PDF 翻页和 Canvas 形状；YAML 属性显隐、cssclasses 与库内 CSS。
-- 默认实时预览直接输入、阅读/源码模式切换与 Ctrl+S 保存。
-- 导出 PDF：笔记右上角“··· → 导出 PDF”，或命令面板执行 **Note Workbench: 导出 PDF**，选择保存位置。
-- 非表格块编辑时，上方浮层实时显示渲染结果；设置 `noteWorkbench.editor.blockPreview.enabled` 默认开启。离开块同步文档，落盘由 Ctrl+S / VS Code Auto Save 负责。
-- 普通矩形 Markdown/HTML 表格的富文本展示、单击单元格直接输入、边缘增行列、右键菜单及拖动手柄。
-- 笔记、YAML 别名、标题和块 ID 的 Wiki 补全；重名笔记选择、缺失笔记创建；反向链接带上下文并定位引用。
-- 笔记菜单可选行列数插入 Markdown 表格；Tab 移格，末格 Tab 加行，Enter 完成本格，Shift+Enter 格内换行。
-- 格式菜单与 `Ctrl/Cmd+B` 加粗、`Ctrl/Cmd+I` 斜体、`Ctrl/Cmd+K` 链接、`Ctrl/Cmd+Shift+X` 删除线。
-- 阅读视图与实时预览共用正文和表格布局；只隐藏编辑控件，保持列宽、对齐、背景、行高与空行间距。
-- 源码范围检查、文档版本冲突拒绝，保护未被编辑的正文。
-- 合成笔记样本、核心测试、VS Code 宿主集成测试和本地打包脚本。
-
-正文默认在同一个 CodeMirror 文档中直接编辑：光标进入格式区域时显示对应语法，其余部分使用统一渲染结果。单元格单击输入并自动同步，无需“应用”。已实现范围和验证证据见 [官方格式兼容清单](docs/obsidian-compatibility.md)，没有用单篇报告代替全语法验收。
-
-## 当前限制
-
-PDF 默认白底 A4、展开折叠块、隐藏编辑控件，导出点击时已同步的内容，无需先保存 Markdown。支持中文、普通表格、HTML 样式、公式、Mermaid、图片和笔记嵌入；多页表格重复表头。使用本机 Chrome / Edge，自动检测优先 Chrome；也可在 `noteWorkbench.pdf.browserPath` 指定可执行文件。没有浏览器时会给出提示，不自动下载浏览器。PDF/音视频附件显示文字提示，不合并附件页或播放内容；超宽表格、复杂打印 CSS 仍需检查导出结果。无法加载图片或渲染图表时报告失败，不假称成功。
-
-- 图谱缓存笔记内容与链接元数据，普通编辑只更新变化文件；支持取消和刷新。大文件专项处理与大库性能调优暂缓，不自动导入旧扩展私有布局。
-- 合并单元格、嵌套表格、省略闭合标签的 HTML 表格使用源码编辑；普通表格嵌在其他 HTML 块内时暂不提供结构控件。显式 `colgroup/col` 支持增删及组内重排；跨列样式组移动、`span` 列定义仍使用源码编辑。
-- 行移动不跨 Markdown 表头或 HTML 分区；列移动同步保留原始单元格内容和 Markdown 对齐标记。
-- 正文输入短暂合并后同步到 VS Code 文本文档，Ctrl+S 会先排空编辑队列再保存。外部冲突时停止覆盖并保留本地内容，可从笔记菜单对比、另存草稿或采用外部版本。原生撤销/重做保持自定义编辑器，不再切换源码标签页。
-- 实际输入法组合、多窗口关闭恢复、不同平台媒体编码仍需人工验收。语义查询、query 嵌入、收藏、最近访问、重命名更新引用、合并单元格和跨区粘贴不在本轮范围。
-- 不宣称已通过完整首版验收，详见 [开发状态](docs/status.md)。
-
-## 打包与测试
-
-```powershell
-npm run package
-# 输出 artifacts/note-workbench-0.5.4.vsix
-```
-
-在 VS Code 扩展面板的“…”菜单中选择“从 VSIX 安装”。发布配置使用发布者 ID `jiaque`（发布者显示名称：jiaque），扩展标识为 `jiaque.note-workbench`。此前 `local-development.note-workbench` 为独立的本地开发身份，安装此包不会自动将其替换；切换时请禁用或卸载旧身份版本，避免重复菜单和编辑器入口。
-
-```powershell
+```sh
 npm run test:extension
+npm run package
 ```
 
-宿主测试默认下载官方 VS Code 1.100.3 至项目内的 `.vscode-test`，使用独立配置与合成笔记。可设置 `NOTE_WORKBENCH_VSCODE` 指向已有 VS Code 可执行文件，或用 `NOTE_WORKBENCH_VSCODE_VERSION` 选择其他测试版本。下载缓存、依赖、测试配置和 VSIX 均由 `.gitignore` 排除。
+Packaging creates `artifacts/note-workbench-<version>.vsix`. Install through **Extensions → ⋯ → Install from VSIX**. Packaging does not publish or push. The formal ID is `jiaque.note-workbench`; `local-development.note-workbench` is the separate maintenance identity. Avoid enabling both for the same workflow.
 
-测试默认总时限 180 秒；慢速网络可设置 `NOTE_WORKBENCH_TEST_TIMEOUT_MS`。本机隔离宿主已验证编辑/保存、撤销重做、多视图同步、源码补全、增量缓存和嵌入源更新；详细范围见 [首版补齐记录](docs/first-release-completion.md)。
+Host tests use an isolated profile. Set `NOTE_WORKBENCH_VSCODE` to an existing VS Code executable to avoid the default runtime download. `npm run preview` is a development-only webview preview: edits stay in memory and do not save the example file. See [screenshot reproduction](docs/images/README.md).
 
-## 新增设置
+## Feedback and license
 
-- `noteWorkbench.notes.newLocation`：缺失笔记创建位置，默认 `current`（当前笔记目录），也可选 `root` 或 `folder`。`folder` 使用 `noteWorkbench.notes.newFolder` 指定库内相对目录；链接明确写了路径时优先采用链接路径。
-- `noteWorkbench.render.remoteImages`：默认允许 HTTPS 远程图片。关闭后显示占位提示，保留本地图片，并作用于 PDF 导出；修改后重新打开笔记。
+[Report an issue](https://github.com/jiaque/note-workbench/issues) with the VS Code/extension versions, a small reproducible note, and expected versus actual behavior. Remove private information before sharing.
 
-输入 `[[` 开始补全；`[[笔记#` 补全标题，`[[笔记#^` 补全块 ID。点击缺失链接后选择“创建笔记”才会新建文件；图谱中的未创建节点也可双击进入此流程。
+Project code uses [Apache-2.0](LICENSE). See [NOTICE](NOTICE) and [third-party notices](THIRD_PARTY_NOTICES.md). References: [development design](docs/development.md), [format compatibility](docs/obsidian-compatibility.md), [changelog](CHANGELOG.md).
 
-源码仓库：[jiaque/note-workbench](https://github.com/jiaque/note-workbench)。构建命令只生成 VSIX，不自动推送 Git 或发布 Marketplace；商店上线状态以发布者管理页面为准。
-
-## 文档与许可
-
-- [需求范围](docs/requirements.md)
-- [开发设计](docs/development.md)
-- [开发状态和验证记录](docs/status.md)
-- [官方格式兼容与验收清单](docs/obsidian-compatibility.md)
-- [第三方依赖声明](THIRD_PARTY_NOTICES.md)
-
-项目自有代码采用 [Apache License 2.0](LICENSE)，项目署名见 [NOTICE](NOTICE)。第三方依赖保留各自的许可证及声明，构建工具会生成依赖许可证清单并纳入 VSIX。当前未复制原 Obsidian Visualizer 的实现代码。此许可证不授予 Obsidian 等第三方商标的使用权。
+Note Workbench is independent, not an official Obsidian product and not endorsed by Obsidian. Obsidian and other trademarks belong to their respective owners.
