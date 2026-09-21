@@ -30,7 +30,7 @@ const createRenderer = () => unified().use(remarkRehype, { allowDangerousHtml: t
     protocols: { ...defaultSchema.protocols, src:[...(defaultSchema.protocols?.src??[]),'data'], href: [...(defaultSchema.protocols?.href ?? []), 'file', 'nw-note', 'nw-tag', 'obsidian'] },
     tagNames: [...defaultSchema.tagNames!, 'colgroup', 'col', 'details', 'summary', 'mark', 'sub', 'sup', 'u', 'abbr', 'figure', 'figcaption', 'audio', 'video', 'source', 'svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'tspan', 'title', 'desc'],
     attributes: { ...defaultSchema.attributes,
-      '*': [...(defaultSchema.attributes!['*'] ?? []), 'style', 'className', 'dataNwBlock', 'dataHeading', 'dataNoteTarget', 'dataEmbed', 'dataWidth', 'dataHeight', 'dataVaultImage', 'dataTaskOffset', 'dataTaskMark',...Object.keys(effectAttributes),'dataNwRepeat','dataNwSvgStatic'],
+      '*': [...(defaultSchema.attributes!['*'] ?? []), 'style', 'className', 'dataNwBlock', 'dataHeading', 'dataNoteTarget', 'dataEmbed', 'dataWidth', 'dataHeight', 'dataVaultImage', 'dataTaskOffset', 'dataTaskMark',...Object.keys(effectAttributes),'dataNwRepeat','dataNwSvgStatic','dataNwSvgTips'],
       code: [['className', /^language-./, 'math-inline', 'math-display']], details: ['open'],
       col:['span','width'],colgroup:['span'],
       audio:['src','controls','loop','muted','preload'],video:['src','controls','loop','muted','preload','poster','width','height'],source:['src','type'],

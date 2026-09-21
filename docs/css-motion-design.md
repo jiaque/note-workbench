@@ -1,5 +1,7 @@
 # HTML/CSS 动效、动态 SVG 与折叠样式设计
 
+2026-09-21 增补：[SVG 区域悬停提示](svg-tooltips-and-note-organization.md)。通过 `data-nw-tip` 声明固定图形区域的纯文本提示，仍保持图片隔离，不开放文档脚本；未声明提示的 SVG 保持原有行为。
+
 日期：2026-09-20 · 状态：方案方向已确认，0.5.5 已实施；下文保留设计协议，实际验证与限制见实现记录。
 
 更新：0.5.5 已实现本设计的动效与隔离 SVG。实际设置为默认启用的布尔项 `noteWorkbench.render.motion.enabled`，并尊重系统减少动态效果偏好；实现差异、验证及限制以[实现记录](motion-implementation.md)为准。下文保留原设计说明。

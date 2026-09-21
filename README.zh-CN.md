@@ -63,6 +63,7 @@ code --install-extension jiaque.note-workbench
 | Markdown 与 HTML | CommonMark/GFM、受支持的 HTML、Callout、高亮、注释、脚注、代码高亮及 YAML 属性 |
 | 公式与图表 | 本地打包的 MathJax、Mermaid，支持源码编辑和渲染 |
 | 笔记链接 | Wiki 链接、别名、标题／块引用、补全、缺失笔记创建及整篇／标题／块嵌入 |
+| 笔记组织 | 正文/YAML 标签面板、标签筛选，以及 VS Code 内重命名或移动笔记后更新引用 |
 | 连接图 | 全局／局部图、反链、过滤、缩放平移、拖动和布局参数记忆 |
 | 表格 | 单元格编辑、增删行列、拖动排序、键盘移格和新建 Markdown 表格 |
 | 附件 | 本地图片、可配置 HTTPS 图片、音视频及嵌入 PDF 翻页 |
@@ -128,6 +129,10 @@ code --install-extension jiaque.note-workbench
 提供持续动效、入场和悬停等 34 个预设。通过 **⋯ → 动效控制** 暂停／恢复或重播 SVG；关闭动效后保留静态内容和进度值。
 
 可以直接手写 SVG。受支持的 CSS／SMIL 动画经过过滤后，在隔离图片中播放；不支持 SVG 脚本和图片内部的交互控件。PDF 使用静态基础画面。
+
+图形上添加 `data-nw-tip="名称：数值"` 可声明纯文本悬停提示；`&#10;` 表示换行。支持固定的圆形、矩形、多边形和曲线路径，保持 SVG 图片隔离。参见[图表提示样例](example/SVG%20tooltips.md)和[完整使用说明](docs/svg-tooltips-and-note-organization.md)。
+
+活动栏新增**标签**面板，支持正文/YAML 标签、数量统计和筛选，点击正文标签也会打开它。VS Code 内重命名或移动笔记时默认更新引用，可用 `noteWorkbench.notes.updateLinksOnRename` 关闭；保留别名和定位片段，跳过歧义引用，不追踪外部工具的重命名。
 
 体验 [example/Motion.md](example/Motion.md)。完整参数和边界见[动效设计](docs/css-motion-design.md)与[实现记录](docs/motion-implementation.md)。
 

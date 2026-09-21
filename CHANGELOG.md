@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add declared SVG hover regions with plain-text tooltips, exact path hit detection, viewBox scaling and preserved image isolation. Include bilingual chart examples.
+- Update note references on VS Code file/folder rename and move, preserving aliases, fragments and dirty document contents; skip ambiguous targets. Add an enabled-by-default setting.
+- Add a filterable native Tags panel using inline/frontmatter tags and the existing note index; clicking a rendered tag opens the panel.
+
 - Keep focus in table cells when clicking nested code or styled text: consume the cell mouse event before replacing its rendered content, preventing the outer Live Preview widget from reopening the table's source position.
 
 - Make inline formatting toggle existing surrounding markers off rather than adding another pair. Keep selected whitespace outside emphasis and use equivalent inline HTML for punctuation boundaries that cannot be expressed with Markdown emphasis without changing text spacing.

@@ -1,4 +1,7 @@
 {
+  "config.notes.updateLinksOnRename": "Update note links when files or folders are renamed or moved within VS Code. Ambiguous links are skipped. Changes follow VS Code saving and undo behavior; external renames are not tracked.",
+  "command.searchTags": "Note Workbench: Filter Tags",
+  "view.tags": "Tags",
   "extension.description": "Obsidian-style Markdown editing in VS Code with live preview, note graphs, editable tables, Markdown/HTML rendering and PDF export.",
   "config.render.motion.enabled": "Enable CSS effects and animated SVG. Enabled by default; respects reduced-motion preferences. Disabling retains static content and progress values. Changes apply immediately.",
   "config.notes.newLocation": "Folder for missing notes: current note folder, vault root, or custom folder. Explicit paths in links take precedence.",

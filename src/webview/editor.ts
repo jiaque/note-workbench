@@ -1,4 +1,5 @@
 import {t} from '../shared/i18n';
+import './svg-tips';
 import {NoteFind,findDecorations} from './find';
 import {isolateEditorShortcuts,handleNoteShortcut} from './shortcuts';
 import { ChangeSet, EditorState, Transaction } from '@codemirror/state';

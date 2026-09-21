@@ -1,4 +1,4 @@
-import {readFile,cp,readdir,lstat} from 'node:fs/promises';
+import {readFile,writeFile,cp,readdir,lstat} from 'node:fs/promises';
 import {resolve,join,relative,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {homedir} from 'node:os';
@@ -32,6 +32,12 @@ async function main(){
   // Copy the whole build: entry points depend on hashed chunks and other assets.
   // Preserve the installed manifest and old assets used by an already-open webview.
   if(!process.argv.includes('--check'))await cp(source,destination,{recursive:true,force:true});
+  if(process.argv.includes('--manifest')&&!process.argv.includes('--check')){
+    // Register new views/settings without changing the installed development identity.
+    installed.contributes=manifest.contributes;installed.activationEvents=manifest.activationEvents;
+    await writeFile(join(target,'package.json'),JSON.stringify(installed,null,2)+'\n');
+    for(const name of ['package.nls.json','package.nls.zh.json','package.nls.zh-cn.json'])await cp(join(root,name),join(target,name));
+  }
   console.log(`Verified ${await verifyTree(source,destination)} build files in ${relative(extensions,target)}. Reload the VS Code window to use the updated build.`);
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))await main();

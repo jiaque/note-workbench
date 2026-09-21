@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import assert from 'node:assert/strict';
 import { NotebookProvider } from '../../src/extension';
 import {NoteIndex} from '../../src/note-index';
+import {TagsProvider} from '../../src/tags-provider';
 
 export async function run() {
   const folder = vscode.workspace.workspaceFolders![0].uri;
@@ -81,6 +82,22 @@ export async function run() {
       await waitFor(()=>!autoDoc.isDirty);assert.match(Buffer.from(await vscode.workspace.fs.readFile(defaultUri)).toString('utf8'),/Autosaved/);
     }finally{await config.update('autoSave',previous,vscode.ConfigurationTarget.Global);}
     console.log('PASS: fresh Markdown default editor selection and VS Code Auto Save');
+    const renameFrom=vscode.Uri.joinPath(folder,'.rename-before.md'),renameTo=vscode.Uri.joinPath(folder,'.rename-after.md'),ref=vscode.Uri.joinPath(folder,'.rename-reference.md');
+    const tags=new TagsProvider(index);
+    try{
+      await vscode.workspace.fs.writeFile(renameFrom,Buffer.from('---\ntags: [test/rename]\n---\n#目标\n'));
+      await vscode.workspace.fs.writeFile(ref,Buffer.from('[[.rename-before#Heading|label]]\n'));
+      const refDoc=await vscode.workspace.openTextDocument(ref);
+      const pending=new vscode.WorkspaceEdit();pending.insert(ref,refDoc.positionAt(refDoc.getText().length),'\nUnsaved text #test/rename');await vscode.workspace.applyEdit(pending);
+      const rename=new vscode.WorkspaceEdit();rename.renameFile(renameFrom,renameTo);assert.ok(await vscode.workspace.applyEdit(rename));
+      await waitFor(()=>refDoc.getText().includes('[[.rename-after#Heading|label]]'));
+      assert.match(refDoc.getText(),/Unsaved text/,'Rename preserves dirty document contents');
+      await refDoc.save();index.refresh();await index.ensure();
+      const groups=await tags.getChildren(),group=groups.find((g:any)=>g.tag==='test/rename');assert.ok(group,'Tag panel indexes frontmatter and inline tags');
+      const children=await tags.getChildren(group);assert.equal(children.length,2);assert.ok(children.some((n:any)=>n.id===renameTo.toString()));
+      assert.equal(tags.getTreeItem(children[0]).command?.command,'noteWorkbench.openEditor');
+      console.log('PASS: VS Code rename updates links without losing dirty edits; tag panel shows renamed notes and opens the editor');
+    }finally{tags.dispose();for(const file of [renameFrom,renameTo,ref])try{await vscode.workspace.fs.delete(file);}catch{}}
   } finally {
     provider.dispose();index.dispose(); incoming.dispose(); state.dispose(); disposed.dispose();
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');

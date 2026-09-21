@@ -1,0 +1,2 @@
+.nw-svg-tooltip{position:fixed;z-index:10000;pointer-events:none;white-space:pre-wrap;overflow-wrap:anywhere;max-width:min(360px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:hidden;padding:12px 16px;border:1px solid var(--line,#ddd);border-radius:7px;background:var(--bg,#fff);color:var(--fg,#222);box-shadow:0 6px 24px #0002;font:14px/1.6 var(--vscode-font-family,sans-serif)}
+.nw-svg-tooltip[hidden]{display:none}@media print{.nw-svg-tooltip{display:none!important}}

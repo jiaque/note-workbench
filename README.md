@@ -64,6 +64,7 @@ For a walkthrough, download or clone this repository, open the entire [example](
 | Equations and diagrams | Locally bundled MathJax and Mermaid, with source editing and rendering |
 | Linked notes | Wiki links, aliases, heading/block links, completion, missing-note creation, whole-note/heading/block embeds |
 | Graph | Global/local views, backlinks, filtering, zoom/pan, dragging and remembered layout controls |
+| Organization | Tag panel for inline/YAML tags; update links when notes are renamed or moved in VS Code |
 | Tables | Cell editing, row/column insertion and deletion, drag reordering, keyboard navigation and new Markdown tables |
 | Attachments | Local images, configurable HTTPS images, audio/video and embedded PDF navigation |
 | PDF export | Supported styling, equations, diagrams, images and note embeds, using an installed Chrome or Edge |
@@ -71,6 +72,10 @@ For a walkthrough, download or clone this repository, open the entire [example](
 | Languages | English and Simplified Chinese; follows VS Code by default |
 
 Reading and Live Preview share the document and table layout. Source remains the stored representation: table edits do not convert the whole note to another format.
+
+SVG charts can declare `data-nw-tip="Label: value"` on shapes for plain-text hover tips. See [SVG tooltip examples](example/SVG%20tooltips.md). SVG remains an isolated image; tooltip text never runs scripts. Fixed circles, rectangles, polygons and paths are supported; moving/clipped geometry is outside this feature's scope.
+
+The **Tags** panel shares the graph's indexing scope and supports filtering. Rename updates are enabled by default via `noteWorkbench.notes.updateLinksOnRename`; they preserve aliases/fragments and skip ambiguous links. They apply to renames inside VS Code, not changes made by external tools.
 
 ## Everyday actions
 

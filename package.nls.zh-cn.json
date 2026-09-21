@@ -1,4 +1,7 @@
 {
+  "config.notes.updateLinksOnRename": "在 VS Code 内重命名或移动文件、文件夹时更新笔记引用。跳过不明确的同名引用；修改遵循 VS Code 的保存与撤销机制，不追踪外部重命名。",
+  "command.searchTags": "Note Workbench：筛选标签",
+  "view.tags": "标签",
   "extension.description": "在 VS Code 中使用 Obsidian 风格的 Markdown 编辑器，支持实时预览、笔记连接图、表格编辑、Markdown/HTML 渲染及 PDF 导出。",
   "config.render.motion.enabled": "启用 CSS 动效和动态 SVG（默认开启，并尊重系统减少动态效果偏好）。关闭后保留静态内容和进度值；修改立即生效。",
   "config.notes.newLocation": "缺失笔记的创建目录：current 为当前笔记目录，root 为工作区根目录，folder 使用自定义目录。链接中明确指定路径时优先使用链接路径。",

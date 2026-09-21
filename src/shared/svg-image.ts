@@ -2,12 +2,14 @@ import {t} from './i18n';
 import {parseFragment,serialize} from 'parse5';
 import {toHtml} from 'hast-util-to-html';
 import {cleanStyle,cleanSvgSheet} from './css-styles';
+import {svgTips} from './svg-tips';
 const tags=new Set('svg g path rect circle ellipse line polyline polygon text tspan title desc defs linearGradient radialGradient stop clipPath mask symbol use animate animateTransform animateMotion mpath set filter feGaussianBlur feOffset feFlood feComposite feMerge feMergeNode feColorMatrix feBlend'.split(' '));
 const attrs=new Set('id class viewBox width height x y x1 x2 y1 y2 cx cy r rx ry d points fill stroke stroke-width stroke-linecap stroke-linejoin stroke-dasharray stroke-dashoffset fill-opacity stroke-opacity opacity transform transform-origin text-anchor font-size font-family font-weight font-style dominant-baseline preserveAspectRatio offset stop-color stop-opacity gradientUnits gradientTransform spreadMethod clip-path clipPathUnits mask maskUnits maskContentUnits filter filterUnits primitiveUnits stdDeviation dx dy in in2 result flood-color flood-opacity operator k1 k2 k3 k4 type values mode'.split(' '));
 const animationAttrs=new Set('attributeName from to by values dur begin end repeatCount repeatDur fill calcMode keyTimes keySplines keyPoints additive accumulate type path rotate'.split(' '));
 const animatedProperties=new Set('x y x1 x2 y1 y2 cx cy r rx ry width height d points fill stroke stroke-width stroke-dashoffset opacity fill-opacity stroke-opacity transform visibility'.split(' '));
 const motionTags=new Set(['animate','animateTransform','animateMotion','set']);
-export function svgImage(source:string):{src:string;staticSrc:string;alt:string;width?:string;height?:string;style:string} {
+attrs.add('fill-rule');
+export function svgImage(source:string):{src:string;staticSrc:string;alt:string;width?:string;height?:string;style:string;tips?:string} {
   if(source.length>500000||new TextEncoder().encode(source).byteLength>500000||/<!DOCTYPE|<!ENTITY/i.test(source))throw new Error(t("SVG 超过 500KB 或包含不支持的文档声明"));
   const root:any=parseFragment(source),svg=root.childNodes.find((n:any)=>n.tagName==='svg');if(!svg)throw new Error(t("SVG 结构无效"));
   let count=0,animations=0;const ids=new Set<string>();
@@ -38,12 +40,12 @@ export function svgImage(source:string):{src:string;staticSrc:string;alt:string;
   const build=(staticMode:boolean)=>{const node=visit(svg,staticMode);node.attrs.push({name:'xmlns',value:'http://www.w3.org/2000/svg'});if(staticMode)node.childNodes.push({nodeName:'style',tagName:'style',namespaceURI:'http://www.w3.org/2000/svg',attrs:[],childNodes:[{nodeName:'#text',value:'*{animation:none!important;transition:none!important}'}]});return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(serialize({nodeName:'#document-fragment',childNodes:[node]} as any));};
   const label=svg.childNodes.find((n:any)=>n.tagName==='title')?.childNodes?.map((n:any)=>n.value??'').join('')||t("SVG 图表");
   const outerStyle=cleanStyle(svg.attrs.find((a:any)=>a.name==='style')?.value??'').split(';').filter(rule=>/^(width|height|max-width|min-width|display|margin(?:-(?:top|right|bottom|left))?|vertical-align):/.test(rule)).join(';');
-  return {src:build(false),staticSrc:build(true),alt:label,style:outerStyle,width:svg.attrs.find((a:any)=>a.name==='width'&&/^\d+(px|%)?$/.test(a.value)&&parseFloat(a.value)<=4096)?.value,height:svg.attrs.find((a:any)=>a.name==='height'&&/^\d+(px|%)?$/.test(a.value)&&parseFloat(a.value)<=4096)?.value};
+  return {src:build(false),staticSrc:build(true),alt:label,style:outerStyle,tips:svgTips(source),width:svg.attrs.find((a:any)=>a.name==='width'&&/^\d+(px|%)?$/.test(a.value)&&parseFloat(a.value)<=4096)?.value,height:svg.attrs.find((a:any)=>a.name==='height'&&/^\d+(px|%)?$/.test(a.value)&&parseFloat(a.value)<=4096)?.value};
 }
 export function isolateSvg(tree:any){
   for(let i=0;i<(tree.children?.length??0);i++){
     const node=tree.children[i];if(node.tagName==='svg'){
-      try{const image=svgImage(toHtml(node));tree.children[i]={type:'element',tagName:'img',properties:{src:image.src,alt:image.alt,style:image.style,dataNwSvgStatic:image.staticSrc,...(image.width?{width:image.width}:{}),...(image.height?{height:image.height}:{})},children:[]};}
+      try{const image=svgImage(toHtml(node));tree.children[i]={type:'element',tagName:'img',properties:{src:image.src,alt:image.alt,style:image.style,dataNwSvgStatic:image.staticSrc,...(image.tips?{dataNwSvgTips:image.tips}:{}),...(image.width?{width:image.width}:{}),...(image.height?{height:image.height}:{})},children:[]};}
       catch(error){tree.children[i]={type:'element',tagName:'span',properties:{className:['render-error']},children:[{type:'text',value:String(error)}]};}
     }else isolateSvg(node);
   }

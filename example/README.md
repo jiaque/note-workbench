@@ -12,6 +12,7 @@ Open this `example` folder in VS Code and start with [Welcome.md](Welcome.md). U
 | [Roadmap.md](Roadmap.md) | Mermaid and a note embed / Mermaid 图及笔记嵌入 |
 | [Decisions.md](Decisions.md) | Links and backlinks / 链接和反向链接 |
 | [Motion.md](Motion.md) | CSS effects and animated SVG / CSS 动效及动态 SVG |
+| [SVG tooltips.md](SVG%20tooltips.md) | Hover data on line, stacked and pie charts / 折线、堆积、饼图的悬停数据提示 |
 
 All content is fictional and written for this project. The screenshots in the main README use these files. You can edit copies freely; edits made in VS Code are real file edits and follow your Auto Save settings.
 

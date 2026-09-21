@@ -13,6 +13,8 @@ import {exportPdf} from './pdf/export';
 import {NoteIndex} from './note-index';
 import {noteCandidates} from './shared/note-links';
 import {blockRemoteImages} from './shared/remote-images';
+import {TagsProvider} from './tags-provider';
+import {registerRenameLinks} from './rename-provider';
 
 export const viewType = 'noteWorkbench.editor';
 
@@ -212,7 +214,7 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
   }
 
   async openLink(origin: vscode.Uri, href: string): Promise<void> {
-    if(href.startsWith('nw-tag:')) {await vscode.commands.executeCommand('workbench.action.findInFiles',{query:'#'+decodeURIComponent(href.slice(7)),filesToInclude:'**/*.md',isCaseSensitive:false});return;}
+    if(href.startsWith('nw-tag:')) {await vscode.commands.executeCommand('noteWorkbench.showTag',decodeURIComponent(href.slice(7)));return;}
     if (href.startsWith('nw-note:')) {
       const resource=await this.resolveResource(origin,decodeURIComponent(href.slice(8)),undefined,true), uri=vscode.Uri.parse(resource.id), destination=uri.fragment, target=uri.with({fragment:''});
       if (destination) this.destinations.set(target.toString(),destination);
@@ -240,9 +242,13 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
 export function activate(context: vscode.ExtensionContext) {
   setLanguage(resolveLanguage(vscode.workspace.getConfiguration('noteWorkbench').get('language','auto'),vscode.env.language));
   const index=new NoteIndex(),graph=new GraphProvider(context,index),provider = new NotebookProvider(context,graph,index);
+  const tags=new TagsProvider(index);
   graph.navigate=(id,offset)=>provider.openAt(id,offset);
   graph.createMissing=(origin,target)=>provider.openLink(vscode.Uri.parse(origin),'nw-note:'+encodeURIComponent(target));
-  context.subscriptions.push(provider, graph,index,
+  context.subscriptions.push(provider, graph,index,tags,registerRenameLinks(),
+    vscode.window.registerTreeDataProvider('noteWorkbench.tags',tags),
+    vscode.commands.registerCommand('noteWorkbench.searchTags',()=>tags.search()),
+    vscode.commands.registerCommand('noteWorkbench.showTag',async(tag:unknown)=>{if(typeof tag==='string'){tags.show(tag);await vscode.commands.executeCommand('noteWorkbench.tags.focus');}}),
     vscode.languages.registerCompletionItemProvider('markdown',{async provideCompletionItems(document,position){
       const prefix=document.lineAt(position).text.slice(0,position.character),match=/\[\[([^\]\n]*)$/.exec(prefix);if(!match)return;
       const options=await index.completions(document.uri,match[1]);

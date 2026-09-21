@@ -14,6 +14,8 @@ Live Preview and floating block previews; reading/source views; Markdown and sup
 
 ## Deferred / 暂缓
 
+2026-09-21 后续更新：重命名更新引用和标签面板已开发，新增 SVG 声明式悬停提示，见[本轮说明](svg-tooltips-and-note-organization.md)。下列历史暂缓项中的“重命名更新引用”已解除；其他项继续暂缓。
+
 - Additional formatting shortcuts for inline code, headings, quotes and lists. Markdown syntax remains supported.
 - Direct table controls within mixed HTML containers; merged-cell editing and cross-region paste.
 - Duplicate block-ID warnings and retaining a previous-note label after switching to non-Markdown files.

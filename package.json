@@ -34,7 +34,7 @@
     "pdf"
   ],
   "main": "./dist/extension.cjs",
-  "activationEvents": [],
+  "activationEvents": ["onStartupFinished"],
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": true
@@ -111,6 +111,13 @@
           "description": "%config.notes.newFolder%",
           "order": 70
         },
+        "noteWorkbench.notes.updateLinksOnRename": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "%config.notes.updateLinksOnRename%",
+          "order": 75
+        },
         "noteWorkbench.graph.include": {
           "type": "array",
           "items": {
@@ -155,6 +162,11 @@
     ],
     "commands": [
       {
+        "command": "noteWorkbench.searchTags",
+        "title": "%command.searchTags%",
+        "icon": "$(filter)"
+      },
+      {
         "command": "noteWorkbench.exportPdf",
         "title": "%command.exportPdf%"
       },
@@ -176,6 +188,10 @@
       }
     ],
     "menus": {
+      "view/title": [
+        {"command":"noteWorkbench.searchTags","when":"view == noteWorkbench.tags","group":"navigation"},
+        {"command":"noteWorkbench.rebuildIndex","when":"view == noteWorkbench.tags","group":"navigation"}
+      ],
       "explorer/context": [
         {
           "command": "noteWorkbench.openEditor",
@@ -199,6 +215,10 @@
           "type": "webview",
           "id": "noteWorkbench.graph",
           "name": "%view.graph%"
+        },
+        {
+          "id": "noteWorkbench.tags",
+          "name": "%view.tags%"
         }
       ]
     }
@@ -213,6 +233,7 @@
     "test:find": "node scripts/test-find.mjs",
     "test:shortcuts": "node scripts/test-shortcuts.mjs",
     "test:table-focus": "node scripts/test-table-focus.mjs",
+    "test:svg-tips": "node scripts/test-svg-tips.mjs",
     "test:motion": "node scripts/test-motion.mjs",
     "test:extension": "node scripts/test-extension.mjs",
     "preview": "node scripts/preview.mjs",

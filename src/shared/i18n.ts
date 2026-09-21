@@ -12,6 +12,11 @@ export function t(key:keyof typeof english,values:Record<string,string|number>={
   return text.replace(/\{(\w+)\}/g,(match,name)=>Object.hasOwn(values,name)?String(values[name]):match);
 }
 export const english = {
+  '筛选标签（留空显示全部）':'Filter tags (leave empty to show all)',
+  '打开笔记':'Open note',
+  '笔记在重命名期间发生变化，请检查引用。':'A note changed during rename. Please check its links.',
+  '存在同名笔记，已跳过 {count} 处不明确的引用。':'Skipped {count} ambiguous links to notes with duplicate names.',
+  '更新笔记引用失败：':'Failed to update note links: ',
   '文章内查找':'Find in note',
   '在文章中查找':'Find in note',
   '区分大小写':'Match case',
