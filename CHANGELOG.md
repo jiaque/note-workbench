@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Tune A4 PDF output for printing with 12 mm side margins, 10.5 pt body text and 9.5 pt tables; keep editor display styles unchanged.
+
 - Wrap long code-block lines in Live Preview, reading mode and block previews without changing source text or expanding the page width.
 
 - Add structured SVG tooltip cards with bold titles, safe series-color dots and right-aligned values. Keep plain-text declarations compatible; document full-plot category bands for line/bar/stacked charts and include browser regression coverage.

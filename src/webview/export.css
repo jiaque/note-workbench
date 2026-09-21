@@ -1,10 +1,10 @@
-@page{size:A4;margin:16mm 14mm}
+@page{size:A4;margin:16mm 12mm}
 :root{color-scheme:light;--bg:#fff;--fg:#24313a;--muted:#65717d;--line:#dce2e7;--accent:#1565c0;--soft:#f3f5f7}
 html,body{background:#fff;color:var(--fg);margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-main.rendered{max-width:none;margin:0;padding:0;font-family:'Segoe UI','Microsoft YaHei',sans-serif;font-size:11pt;line-height:1.7}
+main.rendered{max-width:none;margin:0;padding:0;font-family:'Segoe UI','Microsoft YaHei',sans-serif;font-size:10.5pt;line-height:1.7}
 .rendered h1{font-size:22pt}.rendered h2{font-size:17pt}.rendered h3{font-size:14pt}
 h1,h2,h3,h4,h5,h6,summary{break-after:avoid}p,li{orphans:3;widows:3}
-.rendered table{width:100%;border-collapse:collapse;font-size:10pt;table-layout:auto}
+.rendered table{width:100%;border-collapse:collapse;font-size:9.5pt;table-layout:auto}
 thead{display:table-header-group}tfoot{display:table-footer-group}tr{break-inside:avoid}
 .rendered td,.rendered th{padding:7px 9px;overflow-wrap:anywhere;vertical-align:top}
 .rendered th{background:#f3f5f7}.rendered pre{white-space:pre-wrap;overflow-wrap:anywhere;overflow:visible}
