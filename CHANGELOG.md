@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Wrap long code-block lines in Live Preview, reading mode and block previews without changing source text or expanding the page width.
+
 - Add structured SVG tooltip cards with bold titles, safe series-color dots and right-aligned values. Keep plain-text declarations compatible; document full-plot category bands for line/bar/stacked charts and include browser regression coverage.
 
 - Add declared SVG hover regions with plain-text tooltips, exact path hit detection, viewBox scaling and preserved image isolation. Include bilingual chart examples.
