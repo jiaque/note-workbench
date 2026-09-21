@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Make inline formatting toggle existing surrounding markers off rather than adding another pair. Keep selected whitespace outside emphasis and use equivalent inline HTML for punctuation boundaries that cannot be expressed with Markdown emphasis without changing text spacing.
+
 ## 0.6.0 — 2026-09-20
 
 - Fix local development update white screens caused by missing hashed JavaScript chunks. Add `npm run sync:dev` to copy and verify the complete build while preserving the development extension identity.

@@ -19,7 +19,9 @@ try {
       const view=new EditorView({parent,state:EditorState.create({doc:'text',selection:{anchor:0,head:4},extensions:[formattingKeys]})});view.focus();
       const before=forwarded,event=press(view.contentDOM,key,{shiftKey:shift});
       check(view.state.doc.toString()===expected,`${cell?'cell':'note'} ${key} formats once`);
-      check(event.defaultPrevented&&forwarded===before,`${key} must not reach host`);view.destroy();
+      check(event.defaultPrevented&&forwarded===before,`${key} must not reach host`);
+      if(key!=='k'){press(view.contentDOM,key,{shiftKey:shift});check(view.state.doc.toString()==='text',`${key} toggles off without duplicating markers`);check(forwarded===before,'toggle must not reach host');}
+      view.destroy();
     }
     parent.remove();
   }

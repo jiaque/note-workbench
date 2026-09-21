@@ -1,5 +1,6 @@
 import {t} from '../shared/i18n';
 import {EditorView,keymap} from '@codemirror/view';
+import {inlineFormatEdit} from '../shared/formatting';
 
 export type Format='bold'|'italic'|'strike'|'code'|'link'|'quote'|'bullet'|'task'|'heading';
 export const formats:[Format,string][]=[['bold',t("加粗")],['italic',t("斜体")],['strike',t("删除线")],['code',t("行内代码")],['link',t("链接")],['heading',t("二级标题")],['quote',t("引用")],['bullet',t("无序列表")],['task',t("任务列表")]];
@@ -9,9 +10,8 @@ export function format(view:EditorView,kind:Format):boolean{
   const marks:Partial<Record<Format,string>>={bold:'**',italic:'*',strike:'~~',code:'`'};
   const mark=marks[kind];
   if(mark){
-    const wrapped=selected.startsWith(mark)&&selected.endsWith(mark)&&selected.length>=mark.length*2;
-    const insert=wrapped?selected.slice(mark.length,-mark.length):mark+selected+mark;
-    view.dispatch({changes:{from:selection.from,to:selection.to,insert},selection:{anchor:selection.from+(wrapped?0:mark.length),head:selection.from+insert.length-(wrapped?0:mark.length)},userEvent:'input'});
+    const edit=inlineFormatEdit(source.toString(),selection.from,selection.to,mark);
+    if(edit)view.dispatch({changes:{from:edit.from,to:edit.to,insert:edit.insert},selection:{anchor:edit.anchor,head:edit.head},userEvent:'input'});
   }else if(kind==='link'){
     const insert='['+(selected||t("链接文字"))+'](https://)';const from=selection.from+insert.indexOf('https://');
     view.dispatch({changes:{from:selection.from,to:selection.to,insert},selection:{anchor:from,head:from+8},userEvent:'input'});
