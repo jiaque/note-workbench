@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.1 — 2026-09-21
 
 - Tune A4 PDF output for printing with 12 mm side margins, 10.5 pt body text and 9.5 pt tables; keep editor display styles unchanged.
 
