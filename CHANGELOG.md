@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Keep focus in table cells when clicking nested code or styled text: consume the cell mouse event before replacing its rendered content, preventing the outer Live Preview widget from reopening the table's source position.
+
 - Make inline formatting toggle existing surrounding markers off rather than adding another pair. Keep selected whitespace outside emphasis and use equivalent inline HTML for punctuation boundaries that cannot be expressed with Markdown emphasis without changing text spacing.
 
 ## 0.6.0 — 2026-09-20

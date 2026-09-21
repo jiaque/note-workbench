@@ -315,7 +315,10 @@ function tableElement(table: Table, html: string): HTMLElement {
         };
         td.addEventListener('mousedown', event => {
           if (event.button !== 0 || (event.target as Element).closest('.cell-editor') || (event.ctrlKey || event.metaKey) && (event.target as Element).closest('a')) return;
-          event.preventDefault(); select(); edit(event.isTrusted?{x:event.clientX,y:event.clientY}:undefined);
+          // edit() replaces the clicked code/span node. Its original event path still
+          // bubbles to RenderWidget, but target.closest('.table-card') then fails.
+          // Consume the event before replacement so the outer editor cannot steal focus.
+          event.preventDefault(); event.stopPropagation(); select(); edit(event.isTrusted?{x:event.clientX,y:event.clientY}:undefined);
         });
         td.addEventListener('keydown', event => { if (event.target === td && event.key === 'Enter') { event.preventDefault(); edit(); } });
       }

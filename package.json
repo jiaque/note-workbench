@@ -212,6 +212,7 @@
     "test:caret": "node scripts/test-caret.mjs",
     "test:find": "node scripts/test-find.mjs",
     "test:shortcuts": "node scripts/test-shortcuts.mjs",
+    "test:table-focus": "node scripts/test-table-focus.mjs",
     "test:motion": "node scripts/test-motion.mjs",
     "test:extension": "node scripts/test-extension.mjs",
     "preview": "node scripts/preview.mjs",
