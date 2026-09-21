@@ -33,7 +33,7 @@ function prepared(img:HTMLImageElement){
   const cached=cache.get(img);if(cached?.raw===raw)return cached;
   try{const data=JSON.parse(raw);if(!validTips(data))return;const paths=data.items.map(item=>{const path=new Path2D();path.addPath(shape(item),matrix(item.transforms));return{item,path};});const value={raw,data,paths};cache.set(img,value);return value;}catch{return;}
 }
-export function hitSvgTip(img:HTMLImageElement,x:number,y:number):string|undefined {
+export function hitSvgTip(img:HTMLImageElement,x:number,y:number):SvgTip|undefined {
   const p=prepared(img);if(!p)return;const r=img.getBoundingClientRect(),style=getComputedStyle(img);
   const left=parseFloat(style.borderLeftWidth)+parseFloat(style.paddingLeft),top=parseFloat(style.borderTopWidth)+parseFloat(style.paddingTop);
   const w=r.width-left-parseFloat(style.borderRightWidth)-parseFloat(style.paddingRight),h=r.height-top-parseFloat(style.borderBottomWidth)-parseFloat(style.paddingBottom);
@@ -49,20 +49,35 @@ export function hitSvgTip(img:HTMLImageElement,x:number,y:number):string|undefin
   ctx.lineWidth=Math.min(100,8/Math.min(sx,sy));
   for(const {item,path} of [...p.paths].reverse()){
     const line=['line','polyline'].includes(item.shape)||item.attrs.fill==='none';
-    if(line?ctx.isPointInStroke(path,x,y):ctx.isPointInPath(path,x,y,item.attrs['fill-rule']==='evenodd'?'evenodd':'nonzero'))return item.text;
+    if(line?ctx.isPointInStroke(path,x,y):ctx.isPointInPath(path,x,y,item.attrs['fill-rule']==='evenodd'?'evenodd':'nonzero'))return item;
   }
 }
 const tip=document.createElement('div');tip.className='nw-svg-tooltip';tip.id='nw-svg-tooltip';tip.role='tooltip';tip.hidden=true;document.body.append(tip);
 let owner:HTMLImageElement|undefined;
+let shown:SvgTip|undefined;
 const hide=()=>{tip.hidden=true;owner?.removeAttribute('aria-describedby');owner=undefined;};
-function show(img:HTMLImageElement,text:string,x:number,y:number){
-  if(owner!==img)hide();owner=img;tip.textContent=text;tip.hidden=false;img.setAttribute('aria-describedby',tip.id);
+function show(img:HTMLImageElement,item:SvgTip,x:number,y:number){
+  if(owner!==img)hide();owner=img;
+  if(shown!==item){
+    shown=item;tip.replaceChildren();tip.classList.toggle('nw-svg-tooltip-card',!!item.rows);
+    if(item.rows){
+      if(item.title){const heading=document.createElement('div');heading.className='nw-tip-title';heading.textContent=item.title;tip.append(heading);}
+      for(const row of item.rows){
+        const line=document.createElement('div');line.className='nw-tip-row';
+        const dot=document.createElement('span');dot.className='nw-tip-dot';dot.setAttribute('aria-hidden','true');if(row.color)dot.style.backgroundColor=row.color;else dot.classList.add('nw-tip-dot-empty');
+        const label=document.createElement('span');label.className='nw-tip-label';label.textContent=row.label;
+        const value=document.createElement('span');value.className='nw-tip-value';value.textContent=row.value;
+        line.append(dot,label,value);tip.append(line);
+      }
+    }else tip.textContent=item.text;
+  }
+  tip.hidden=false;img.setAttribute('aria-describedby',tip.id);
   const r=tip.getBoundingClientRect();tip.style.left=Math.max(8,Math.min(x+16,innerWidth-r.width-8))+'px';tip.style.top=Math.max(8,Math.min(y+16,innerHeight-r.height-8))+'px';
 }
 document.addEventListener('pointermove',event=>{
   const img=event.target instanceof HTMLImageElement?event.target:undefined;
   if(!img?.hasAttribute('data-nw-svg-tips')){hide();return;}
-  const text=hitSvgTip(img,event.clientX,event.clientY);if(text)show(img,text,event.clientX,event.clientY);else hide();
+  const item=hitSvgTip(img,event.clientX,event.clientY);if(item)show(img,item,event.clientX,event.clientY);else hide();
 });
 document.addEventListener('pointerleave',hide);document.addEventListener('pointerdown',hide,true);document.addEventListener('scroll',hide,true);window.addEventListener('blur',hide);window.addEventListener('resize',hide);
 document.addEventListener('keydown',event=>{if(event.key==='Escape')hide();});

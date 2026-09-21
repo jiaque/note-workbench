@@ -1,6 +1,10 @@
 import {parseFragment} from 'parse5';
 
-export interface SvgTip {text:string; shape:string; attrs:Record<string,string>; transforms:string[]}
+export interface TipRow {label:string;value:string;color?:string}
+export interface SvgTip {text:string; title?:string;rows?:TipRow[];shape:string; attrs:Record<string,string>; transforms:string[]}
+export function validTipRows(rows:unknown):rows is TipRow[]{
+  return Array.isArray(rows)&&rows.length>0&&rows.length<=16&&rows.every(r=>r&&typeof r.label==='string'&&r.label.length>0&&r.label.length<=200&&typeof r.value==='string'&&r.value.length<=200&&(r.color===undefined||typeof r.color==='string'&&/^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(r.color)));
+}
 export interface SvgTips {box:number[]; aspect:string; items:SvgTip[]}
 const shapes=new Set(['circle','ellipse','rect','path','polygon','polyline','line']);
 const geometry=new Set('cx cy r rx ry x y width height x1 y1 x2 y2 d points fill-rule stroke-width fill'.split(' '));
@@ -20,6 +24,7 @@ export function validTips(value:any):value is SvgTips {
   return value&&Array.isArray(value.box)&&value.box.length===4&&value.box.every((n:any)=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=1e6)&&value.box[2]>0&&value.box[3]>0&&
     typeof value.aspect==='string'&&/^(?:none|x(?:Min|Mid|Max)Y(?:Min|Mid|Max)(?: (?:meet|slice))?)$/.test(value.aspect)&&
     Array.isArray(value.items)&&value.items.length<=500&&value.items.every((item:any)=>item&&typeof item.text==='string'&&item.text.length>0&&item.text.length<=2000&&shapes.has(item.shape)&&
+      (item.title===undefined||typeof item.title==='string'&&item.title.length<=200)&&(item.rows===undefined||validTipRows(item.rows))&&
       Array.isArray(item.transforms)&&item.transforms.length<=32&&item.transforms.every((s:any)=>typeof s==='string'&&validTransform(s))&&item.attrs&&typeof item.attrs==='object'&&!Array.isArray(item.attrs)&&
       Object.entries(item.attrs).every(([key,v])=>geometry.has(key)&&typeof v==='string'&&v.length<=10000&&(key==='d'?/^[MmZzLlHhVvCcSsQqTtAaEe\d\s.,+\-]*$/.test(v):key==='points'?/^[Ee\d\s.,+\-]*$/.test(v):key==='fill-rule'?['nonzero','evenodd'].includes(v):key==='fill'?v==='none':number.test(v)&&Number.isFinite(+v)&&Math.abs(+v)<=1e6)));
 }
@@ -41,11 +46,15 @@ export function svgTips(source:string):string|undefined {
     const transform=attr(node,'transform');if(transform&&!validTransform(transform))return;
     const next=transform?[...transforms,transform]:transforms;
     const fill=attr(node,'fill')??inheritedFill;
-    const text=attr(node,'data-nw-tip');
+    let text=attr(node,'data-nw-tip');
+    const title=attr(node,'data-nw-tip-title');let rows:TipRow[]|undefined;
+    const rawRows=attr(node,'data-nw-tip-rows');
+    if(typeof title==='string'&&title.length<=200&&typeof rawRows==='string'&&rawRows.length<=10000)try{const value=JSON.parse(rawRows);if(validTipRows(value))rows=value;}catch{/* Invalid cards may fall back to the existing plain-text tip. */}
+    if(rows)text=[title,...rows.map(row=>`${row.label}: ${row.value}`)].filter(Boolean).join('\n');
     if(text&&shapes.has(node.tagName)){
       const attrs:Record<string,string>={};for(const a of node.attrs??[])if(geometry.has(a.name)&&a.name!=='fill')attrs[a.name]=a.value;
       if(fill==='none')attrs.fill='none';
-      const item={shape:node.tagName,text,attrs,transforms:next};if(validTips({...result,items:[item]}))result.items.push(item);
+      const item={shape:node.tagName,text,attrs,transforms:next,...(rows?{title,rows}:{})};if(validTips({...result,items:[item]}))result.items.push(item);
     }
     for(const child of node.childNodes??[])walk(child,next,depth+1,fill);
   };walk(svg,[],0);

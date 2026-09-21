@@ -75,6 +75,8 @@ Reading and Live Preview share the document and table layout. Source remains the
 
 SVG charts can declare `data-nw-tip="Label: value"` on shapes for plain-text hover tips. See [SVG tooltip examples](example/SVG%20tooltips.md). SVG remains an isolated image; tooltip text never runs scripts. Fixed circles, rectangles, polygons and paths are supported; moving/clipped geometry is outside this feature's scope.
 
+For chart-style cards, use `data-nw-tip-title` plus `data-nw-tip-rows` (JSON rows with `label`, `value` and optional hex `color`). Cards show a bold title, colored markers and right-aligned values. Transparent full-height category bands work for line/column/stacked charts; horizontal bars use full-width bands. See the same example's **Axis bands** section. No automatic totals or grouping are performed.
+
 The **Tags** panel shares the graph's indexing scope and supports filtering. Rename updates are enabled by default via `noteWorkbench.notes.updateLinksOnRename`; they preserve aliases/fragments and skip ambiguous links. They apply to renames inside VS Code, not changes made by external tools.
 
 ## Everyday actions

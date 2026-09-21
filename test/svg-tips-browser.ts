@@ -16,11 +16,21 @@ try{
   doc.dispatchEvent(new KeyboardEvent('keydown',{key:'e',ctrlKey:true,bubbles:true}));await tick();await tick();
   check(doc.querySelector('.reading-document'),'switched to reading mode');
   img=doc.querySelector<HTMLImageElement>('img[data-nw-svg-tips]')!;check(img,'reading image exists');await img.decode();await hover(334,90);check(doc.querySelector('.nw-svg-tooltip')?.textContent==='Team B: 50','reading mode tooltip');
-  const extra=doc.querySelectorAll<HTMLImageElement>('img[data-nw-svg-tips]')[1];await extra.decode();extra.scrollIntoView();await tick();
+  const card=doc.querySelector<HTMLImageElement>('img[alt="Monthly axis-band tooltips"]')!;await card.decode();card.scrollIntoView();await tick();
+  const hoverCard=async(x:number,y:number)=>{const r=card.getBoundingClientRect();card.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,clientX:r.left+x*r.width/600,clientY:r.top+y*r.height/240}));await tick();};
+  await hoverCard(300,35);check(doc.querySelector('.nw-tip-title')?.textContent==='2025-09','band top triggers card far from points');
+  check(doc.querySelectorAll('.nw-tip-row').length===3,'series only, no automatic total');
+  check((doc.querySelector('.nw-tip-dot') as HTMLElement).style.backgroundColor==='rgb(32, 182, 176)','series color');
+  const rights=[...doc.querySelectorAll('.nw-tip-value')].map(n=>n.getBoundingClientRect().right);check(Math.max(...rights)-Math.min(...rights)<1,'values right aligned');
+  await hoverCard(300,195);check(doc.querySelector('.nw-tip-title')?.textContent==='2025-09','band bottom triggers same category');
+  await hoverCard(410,100);check(doc.querySelector('.nw-tip-title')?.textContent==='2025-10','neighbor category switches');
+  await hoverCard(300,220);check((doc.querySelector('.nw-svg-tooltip') as HTMLElement).hidden,'axis labels outside plot do not trigger');
+  const extra=[...doc.querySelectorAll<HTMLImageElement>('img[data-nw-svg-tips]')].at(-1)!;await extra.decode();extra.scrollIntoView();await tick();
   const hoverExtra=async(x:number,y:number)=>{const r=extra.getBoundingClientRect();extra.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,clientX:r.left+x*r.width/200,clientY:r.top+y*r.height/100}));await tick();};
   await hoverExtra(50,40);check(doc.querySelector('.nw-svg-tooltip')?.textContent==='<img src=x onerror=alert(1)>','transformed point and hostile text stays literal');
   check(!doc.querySelector('.nw-svg-tooltip img'),'tooltip does not parse HTML');
   await hoverExtra(80,65);check(doc.querySelector('.nw-svg-tooltip')?.textContent==='Curve','unfilled curved path hit');
   check((win as any).testEditCount===0,'hover never edits document');
-  output.textContent='PASS: point, stack, pie path, curve, transforms, resize, Escape, reading view and inert hostile text; no source edits.';
+  card.scrollIntoView();await tick();await hoverCard(300,40);
+  output.textContent='PASS: legacy tips, structured card styles, full-height category bands, switching, plot bounds, paths, transforms, resize and inert text; no source edits.';
 }catch(error){output.textContent='FAIL: '+String(error);console.error(error);}

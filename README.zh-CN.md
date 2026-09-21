@@ -132,6 +132,8 @@ code --install-extension jiaque.note-workbench
 
 图形上添加 `data-nw-tip="名称：数值"` 可声明纯文本悬停提示；`&#10;` 表示换行。支持固定的圆形、矩形、多边形和曲线路径，保持 SVG 图片隔离。参见[图表提示样例](example/SVG%20tooltips.md)和[完整使用说明](docs/svg-tooltips-and-note-organization.md)。
 
+统计图推荐使用 `data-nw-tip-title` + `data-nw-tip-rows`（含 `label`、`value` 和可选十六进制 `color` 的 JSON 数组），显示加粗标题、色点及右对齐数值。折线/柱状/堆积图可声明整高分类区间，横向条形图声明整宽区间，无需对准数据点；数据由作者提供，不自动计算总计。样例的 **Axis bands / 分类区间提示** 展示完整写法。
+
 活动栏新增**标签**面板，支持正文/YAML 标签、数量统计和筛选，点击正文标签也会打开它。VS Code 内重命名或移动笔记时默认更新引用，可用 `noteWorkbench.notes.updateLinksOnRename` 关闭；保留别名和定位片段，跳过歧义引用，不追踪外部工具的重命名。
 
 体验 [example/Motion.md](example/Motion.md)。完整参数和边界见[动效设计](docs/css-motion-design.md)与[实现记录](docs/motion-implementation.md)。

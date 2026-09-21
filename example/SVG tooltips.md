@@ -37,3 +37,40 @@ For a larger hover target, add a transparent shape in the same SVG:
 ```
 
 `&#10;` separates lines. Overlapping regions use the last declared matching shape. Ordinary SVG images without annotations are unchanged.
+
+## Axis bands / 分类区间提示
+
+Move anywhere above or below a point within its month. The card lists authored values; no totals are calculated.
+
+鼠标进入某月份对应的竖向区间即可查看所有系列，不必对准圆点。提示值由作者填写，不自动计算合计。
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 240" width="600" height="240">
+  <title>Monthly axis-band tooltips</title>
+  <path d="M40 30 H560 M40 110 H560 M40 200 H560" fill="none" stroke="#e5e7eb"/>
+  <path d="M100 85 L300 60 L500 75" fill="none" stroke="#20b6b0" stroke-width="3"/>
+  <path d="M100 155 L300 140 L500 150" fill="none" stroke="#3987ff" stroke-width="3"/>
+  <path d="M100 193 L300 190 L500 192" fill="none" stroke="#9260eb" stroke-width="3"/>
+  <circle cx="100" cy="85" r="4" fill="#20b6b0"/>
+  <circle cx="300" cy="60" r="4" fill="#20b6b0"/>
+  <circle cx="500" cy="75" r="4" fill="#20b6b0"/>
+  <text x="80" y="224" fill="currentColor">2025-08</text>
+  <text x="280" y="224" fill="currentColor">2025-09</text>
+  <text x="480" y="224" fill="currentColor">2025-10</text>
+  <rect x="40" y="30" width="160" height="170" fill="transparent"
+        data-nw-tip-title="2025-08"
+        data-nw-tip-rows='[{"label":"老客户","value":"210.0万","color":"#20b6b0"},{"label":"新客户","value":"41.7万","color":"#3987ff"},{"label":"试用客户","value":"0.8万","color":"#9260eb"}]'/>
+  <rect x="200" y="30" width="200" height="170" fill="transparent"
+        data-nw-tip-title="2025-09"
+        data-nw-tip-rows='[{"label":"老客户","value":"240.2万","color":"#20b6b0"},{"label":"新客户","value":"53.8万","color":"#3987ff"},{"label":"试用客户","value":"1.1万","color":"#9260eb"}]'/>
+  <rect x="400" y="30" width="160" height="170" fill="transparent"
+        data-nw-tip-title="2025-10"
+        data-nw-tip-rows='[{"label":"老客户","value":"220.0万","color":"#20b6b0"},{"label":"新客户","value":"46.1万","color":"#3987ff"},{"label":"试用客户","value":"0.9万","color":"#9260eb"}]'/>
+</svg>
+
+```html
+<rect x="200" y="30" width="200" height="170" fill="transparent"
+      data-nw-tip-title="2025-09"
+      data-nw-tip-rows='[{"label":"老客户","value":"240.2万","color":"#20b6b0"},{"label":"新客户","value":"53.8万","color":"#3987ff"}]'/>
+```
+
+For horizontal bars, use horizontal category bands across the full plot width. For grouped/stacked columns, use one vertical band per category and list its series in chart order. Keep the overlay inside the plot, after the chart shapes. Pie/Sankey/funnel charts can keep their actual shape regions and use the same card attributes.

@@ -1,2 +1,7 @@
 .nw-svg-tooltip{position:fixed;z-index:10000;pointer-events:none;white-space:pre-wrap;overflow-wrap:anywhere;max-width:min(360px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:hidden;padding:12px 16px;border:1px solid var(--line,#ddd);border-radius:7px;background:var(--bg,#fff);color:var(--fg,#222);box-shadow:0 6px 24px #0002;font:14px/1.6 var(--vscode-font-family,sans-serif)}
 .nw-svg-tooltip[hidden]{display:none}@media print{.nw-svg-tooltip{display:none!important}}
+.nw-svg-tooltip-card{min-width:min(240px,calc(100vw - 16px));max-width:min(440px,calc(100vw - 16px));padding:14px 18px;white-space:normal}
+.nw-tip-title{font-size:15px;font-weight:700;line-height:1.45;margin-bottom:10px;white-space:pre-wrap}
+.nw-tip-row{display:grid;grid-template-columns:10px minmax(0,1fr) minmax(0,auto);align-items:baseline;column-gap:10px;margin-top:7px;line-height:1.5}
+.nw-tip-dot{width:10px;height:10px;border-radius:50%;align-self:center;background:currentColor}.nw-tip-dot-empty{visibility:hidden}
+.nw-tip-label{white-space:pre-wrap}.nw-tip-value{text-align:right;font-variant-numeric:tabular-nums;white-space:pre-wrap;margin-left:16px}
