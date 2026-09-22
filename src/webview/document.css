@@ -40,6 +40,11 @@ main{max-width:1240px;padding:32px 54px 64px}
 .document-menu .note-menu-submenu{position:absolute;right:100%;top:0;width:155px;padding:6px;background:var(--bg);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px #0002}
 .document-menu .note-menu-submenu[hidden]{display:none}
 .document-menu:lang(en) .note-menu-submenu{width:190px}
+/* Callout tables share their nearest card's accent, including nested callouts. */
+.rendered .callout table th,.rendered .callout table td{border-color:color-mix(in srgb,var(--callout-color) 18%,var(--bg))}
+.rendered .callout table th{background:color-mix(in srgb,var(--callout-color) 16%,var(--bg))}
+.rendered .callout table td{background:color-mix(in srgb,var(--callout-color) 2%,var(--bg))}
+.rendered .callout table tbody tr:nth-child(odd)>td{background:color-mix(in srgb,var(--callout-color) 7%,var(--bg))}
 /* Preserve code whitespace while wrapping long tokens in every rendered view. */
 .rendered pre{min-width:0;max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal}
 .rendered pre code{white-space:inherit;overflow-wrap:inherit;word-break:inherit}

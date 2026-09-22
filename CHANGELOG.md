@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Give tables inside callouts accent-tinted headers, alternating row backgrounds and borders in rendered views and PDF output, following the nearest callout color.
+
 - Keep floating block previews clear of the editable line after delayed image loads, image failures and editor reflow; anchor above previews by their bottom edge and track layout changes.
 
 ## 0.6.1 — 2026-09-21
