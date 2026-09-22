@@ -3,7 +3,7 @@
   "displayName": "Note Workbench — Obsidian-style Editor",
   "icon": "media/icon.png",
   "description": "%extension.description%",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "publisher": "jiaque",
   "author": "jiaque",
   "repository": {

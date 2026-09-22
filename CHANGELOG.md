@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.2 — 2026-09-22
 
 - Give tables inside callouts accent-tinted headers, alternating row backgrounds and borders in rendered views and PDF output, following the nearest callout color.
 
