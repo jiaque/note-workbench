@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Keep floating block previews clear of the editable line after delayed image loads, image failures and editor reflow; anchor above previews by their bottom edge and track layout changes.
+
 ## 0.6.1 — 2026-09-21
 
 - Tune A4 PDF output for printing with 12 mm side margins, 10.5 pt body text and 9.5 pt tables; keep editor display styles unchanged.

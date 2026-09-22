@@ -19,6 +19,8 @@ export class BlockPreview {
   private dismissed='';
   private view?:EditorView;
   private from=0;
+  private positionFrame=0;
+  private sizeObserver=new ResizeObserver(()=>this.schedulePosition());
   enabled=true;
   constructor(private send:(message:unknown)=>void,private enhance:(body:HTMLElement)=>void) {
     this.box.className='block-preview';this.box.hidden=true;this.box.setAttribute('aria-label',t("当前块实时预览"));
@@ -29,11 +31,13 @@ export class BlockPreview {
     header.append(title,this.label,close);this.body.className='rendered block-preview-body';this.box.append(header,this.body);document.body.append(this.box);
     this.box.addEventListener('mousedown',event=>event.preventDefault());
     this.box.addEventListener('click',event=>{if((event.target as Element).closest('a'))event.preventDefault();});
-    window.addEventListener('resize',()=>this.position());window.addEventListener('scroll',()=>this.position(),true);
+    this.sizeObserver.observe(this.box);
+    window.addEventListener('resize',()=>this.schedulePosition());window.addEventListener('scroll',()=>this.schedulePosition(),true);
     document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!this.box.hidden){this.dismissed=this.key;this.hide();}});
   }
-  hide(){clearTimeout(this.timer);this.requestId++;this.box.hidden=true;}
+  hide(){clearTimeout(this.timer);cancelAnimationFrame(this.positionFrame);this.positionFrame=0;this.requestId++;this.box.hidden=true;}
   update(view:EditorView|undefined,editing:boolean) {
+    if(this.view!==view){if(this.view)this.sizeObserver.unobserve(this.view.dom);if(view)this.sizeObserver.observe(view.dom);}
     this.view=view;
     if(!this.enabled || !view || !editing || !view.hasFocus){this.hide();this.key='';return;}
     if(view.composing)return;
@@ -43,14 +47,19 @@ export class BlockPreview {
     if(this.dismissed===key)return;
     if(this.key!==key){this.dismissed='';this.body.replaceChildren();}
     this.key=key;this.from=block.from;
-    this.box.hidden=false;this.label.textContent=t("更新中…");this.position();
+    this.box.hidden=false;this.label.textContent=t("更新中…");this.schedulePosition();
     clearTimeout(this.timer);const requestId=++this.requestId;
     this.timer=setTimeout(()=>this.send({type:'preview',requestId,source,from:block.from,to:block.to}),130);
   }
   receive(message:any){
     if(message.requestId!==this.requestId || this.box.hidden)return;
     this.body.innerHTML=message.html;this.label.textContent=message.error?t("暂未渲染"):t("已更新");
-    this.enhance(this.body);requestAnimationFrame(()=>this.position());
+    this.enhance(this.body);this.schedulePosition();
+  }
+  private schedulePosition(){
+    if(this.box.hidden||this.positionFrame)return;
+    // Measure after CodeMirror has replaced its rendered widget with editable source.
+    this.positionFrame=requestAnimationFrame(()=>{this.positionFrame=0;this.position();});
   }
   private position(){
     if(this.box.hidden || !this.view)return;
@@ -63,7 +72,10 @@ export class BlockPreview {
     const below=available<100;
     const height=Math.min(320,below?innerHeight-active.bottom-24:available);
     this.box.style.maxHeight=Math.max(90,height)+'px';
-    this.box.style.top=(below?active.bottom+10:Math.max(10,caret.top-this.box.getBoundingClientRect().height-10))+'px';
+    // Anchor the bottom edge when above: late image/diagram growth must go upward,
+    // never downward over the editable line between resize notifications.
+    this.box.style.top=below?active.bottom+10+'px':'auto';
+    this.box.style.bottom=below?'auto':Math.max(10,innerHeight-caret.top+10)+'px';
     this.box.dataset.placement=below?'below':'above';
   }
 }
