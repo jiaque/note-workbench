@@ -5,7 +5,7 @@ import {t} from '../shared/i18n';
 export class BlockInsert {
   private cachedSource='';private cachedNodes:any[]=[];private openingSource='';
   private plus=document.createElement('button');private menu=document.createElement('div');private line=document.createElement('div');private at=0;private view?:EditorView;private frame=0;private closeTimer?:ReturnType<typeof setTimeout>;
-  constructor(private getView:()=>EditorView|undefined,private enabled:()=>boolean,private table:(at:number)=>void){
+  constructor(private getView:()=>EditorView|undefined,private enabled:()=>boolean,private table:(at:number)=>void,private inserted?:(view:EditorView)=>void){
     this.plus.className='block-insert-plus';this.plus.textContent='+';this.plus.setAttribute('aria-label',t('插入段落'));this.menu.className='block-insert-menu';this.line.className='block-insert-line';this.plus.hidden=this.menu.hidden=this.line.hidden=true;document.body.append(this.plus,this.line,this.menu);
     this.plus.onmousedown=e=>e.preventDefault();this.plus.onclick=()=>this.insert('');
     this.plus.oncontextmenu=e=>{e.preventDefault();this.menu.replaceChildren();for(const[label,run]of [[t('插入目录'),()=>this.insert(makeToc(this.view!.state.doc.toString()))],[t('插入表格'),()=>{const at=this.at;this.close();this.table(at);}]] as const){const b=document.createElement('button');b.textContent=label;b.onclick=run;this.menu.append(b);}this.menu.hidden=false;const r=this.plus.getBoundingClientRect();this.menu.style.left=Math.min(r.left,innerWidth-180)+'px';this.menu.style.top=Math.min(r.bottom,innerHeight-100)+'px';};
@@ -25,7 +25,7 @@ export class BlockInsert {
     for(let i=0;i<nodes.length;i++){const n=nodes[i],end=n.position.end.offset,next=nodes[i+1]?.position.start.offset;const a=v.coordsAtPos(end),b=next===undefined?null:v.coordsAtPos(next);if(a)consider(end,b?(a.bottom+b.top)/2:a.bottom+8);}
     if(!best){this.close();return;}const target=best as {at:number;y:number};this.at=target.at;this.view=v;this.openingSource=source;this.plus.hidden=this.line.hidden=false;this.plus.style.left=Math.max(2,r.left-30)+'px';this.plus.style.top=target.y-12+'px';this.line.style.left=r.left+'px';this.line.style.top=target.y+'px';this.line.style.width=r.width+'px';
   }
-  private insert(body:string){const v=this.view;if(!v||v!==this.getView()||v.state.readOnly||v.state.doc.toString()!==this.openingSource){this.close();return;}const edit=insertBlock(v.state.doc.toString(),this.at,body);this.close();v.dispatch({changes:{from:edit.from,to:edit.to,insert:edit.insert},selection:{anchor:edit.anchor},scrollIntoView:true,userEvent:'input'});v.focus();}
+  private insert(body:string){const v=this.view;if(!v||v!==this.getView()||v.state.readOnly||v.state.doc.toString()!==this.openingSource){this.close();return;}const edit=insertBlock(v.state.doc.toString(),this.at,body);this.close();v.dispatch({changes:{from:edit.from,to:edit.to,insert:edit.insert},selection:{anchor:edit.anchor},scrollIntoView:true,userEvent:'input'});v.focus();if(!body)this.inserted?.(v);}
 }
 
 export function editToc(view:EditorView,from:number){

@@ -12,6 +12,9 @@ export function t(key:keyof typeof english,values:Record<string,string|number>={
   return text.replace(/\{(\w+)\}/g,(match,name)=>Object.hasOwn(values,name)?String(values[name]):match);
 }
 export const english = {
+  '删除当前块':'Delete this block',
+  '已删除当前块':'Block deleted',
+  '撤销':'Undo',
   '更新目录':'Update table of contents',
   '删除目录':'Delete table of contents',
   '自动更新目录':'Update table of contents automatically',

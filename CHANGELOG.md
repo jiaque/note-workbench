@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Show the floating preview immediately after inserting an empty paragraph. Add a hover-only block delete button, a pale red outline only when hovering that button, and undo support.
+
 - Keep block previews and source selections active when opening formatting menus; restore selections across host undo/redo so formatting can continue immediately. Use chain-link and highlighted-A toolbar icons.
 
 - Add contextual formatting controls, source caret/selection hints in block previews, local image/file path completion and URL paste over selected text.

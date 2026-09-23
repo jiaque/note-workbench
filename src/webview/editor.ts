@@ -21,6 +21,7 @@ import {formattingKeys} from './formatting';
 import {historySelection} from './history-selection';
 import {pasteLinks,selectionToolbar,setToolbarEnabled} from './authoring-toolbar';
 import {BlockInsert,updateTocs,editToc} from './block-insert';
+import {BlockDelete} from './block-delete';
 import {insertBlock,managedTocs} from '../shared/authoring';
 import {createElement, Table2, Tag, FileDown, Play, Pause, RotateCcw, Code2, Save, ChevronLeft, Square, SquareCheck, type IconNode} from 'lucide';
 import {loadMermaid} from './mermaid';
@@ -56,7 +57,8 @@ let disposeMedia: (()=>void)[]=[];
 const root = document.getElementById('app')!;
 root.innerHTML = `<details class="document-menu"><summary aria-label="${t("笔记操作")}" title="${t("笔记操作")}">···</summary><nav aria-label="${t("笔记操作")}"></nav></details><div id="status" role="status" aria-live="polite"></div><main id="content"></main>`;
 const content = document.getElementById('content')!;
-const blockInsert=new BlockInsert(()=>editor,()=>mode==='edit'&&!sourceMode&&!sync.conflict,at=>insertTable(at));
+const blockInsert=new BlockInsert(()=>editor,()=>mode==='edit'&&!sourceMode&&!sync.conflict,at=>insertTable(at),view=>floatingPreview.activate(view));
+const blockDelete=new BlockDelete(()=>editor,()=>mode==='edit'&&!sourceMode&&!sync.conflict,()=>flushCell?.(),()=>request('undo'));
 let tocTimer:ReturnType<typeof setTimeout>|undefined;
 let autoToc=true;
 isolateEditorShortcuts(content);
@@ -392,6 +394,7 @@ function blockElement(block: Block, view?: EditorView): HTMLElement {
   return section;
 }
 function navigation() {
+  blockDelete.hide();
   const menu=root.querySelector<HTMLDetailsElement>('.document-menu')!;
   const close=()=>{menu.open=false;};
   const icon=(shape:IconNode)=>createElement(shape,{'aria-hidden':'true',width:18,height:18,'stroke-width':1.7});
@@ -449,6 +452,7 @@ function render() {
   if (!snapshot) return;
   floatingPreview.hide();
   blockInsert.close();clearTimeout(tocTimer);
+  blockDelete.changed();
   const scroll = window.scrollY;
   if(editor) savedSelection={anchor:editor.state.selection.main.anchor,head:editor.state.selection.main.head};
   flushCell?.(); editor?.destroy(); editor = undefined;
@@ -475,7 +479,7 @@ function render() {
             clearTimeout(tocTimer);if(autoToc)tocTimer=setTimeout(()=>{if(editor&&!sync.conflict)updateTocs(editor);},900);
           }
           if(update.docChanged||update.selectionSet||update.focusChanged)floatingPreview.update(update.view,mode==='edit'&&!sourceMode);
-          if(update.docChanged)noteFind.changed();
+          if(update.docChanged){noteFind.changed();blockDelete.changed();}
         }),
         EditorView.domEventHandlers({
           blur:()=>{setTimeout(()=>{flush();floatingPreview.update(editor,mode==='edit'&&!sourceMode);},0);},

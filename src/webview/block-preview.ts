@@ -7,7 +7,8 @@ import {mirrorSelection} from './preview-selection';
 export function activePreviewBlock(source:string, position:number) {
   const root=liveParser(source);
   const node=root.children.find((n:any)=>n.position.start.offset<=position && n.position.end.offset>=position);
-  if(!node || node.type==='table' || node.type==='html' && /^\s*<table\b/i.test(source.slice(node.position.start.offset)))return;
+  if(!node){const from=position===0?0:source.lastIndexOf('\n',position-1)+1,end=source.indexOf('\n',position),to=end<0?source.length:end;if(!source.slice(from,to).trim())return {from,to};return;}
+  if(node.type==='table' || node.type==='html' && /^\s*<table\b/i.test(source.slice(node.position.start.offset)))return;
   return {from:node.position.start.offset as number,to:node.position.end.offset as number};
 }
 
@@ -42,6 +43,7 @@ export class BlockPreview {
     document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!this.box.hidden){this.dismissed=this.key;this.hide();}});
   }
   hide(){clearTimeout(this.timer);cancelAnimationFrame(this.positionFrame);this.positionFrame=0;this.requestId++;this.box.hidden=true;}
+  activate(view:EditorView){this.dismissed='';this.update(view,true);}
   update(view:EditorView|undefined,editing:boolean) {
     if(this.view!==view){if(this.view)this.sizeObserver.unobserve(this.view.dom);if(view)this.sizeObserver.observe(view.dom);}
     this.view=view;
