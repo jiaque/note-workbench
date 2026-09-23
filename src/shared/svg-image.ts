@@ -10,6 +10,9 @@ const animatedProperties=new Set('x y x1 x2 y1 y2 cx cy r rx ry width height d p
 const motionTags=new Set(['animate','animateTransform','animateMotion','set']);
 attrs.add('fill-rule');
 export function svgImage(source:string):{src:string;staticSrc:string;alt:string;width?:string;height?:string;style:string;tips?:string} {
+  // Plotting tools emit this standard prolog. Discard it without loading its DTD;
+  // all other doctypes and entity declarations remain rejected below.
+  source=source.replace(/<!DOCTYPE\s+svg\s+PUBLIC\s+(["'])-\/\/W3C\/\/DTD SVG 1\.1\/\/EN\1\s+(["'])https?:\/\/www\.w3\.org\/Graphics\/SVG\/1\.1\/DTD\/svg11\.dtd\2\s*>/gi,'');
   if(source.length>500000||new TextEncoder().encode(source).byteLength>500000||/<!DOCTYPE|<!ENTITY/i.test(source))throw new Error(t("SVG 超过 500KB 或包含不支持的文档声明"));
   const root:any=parseFragment(source),svg=root.childNodes.find((n:any)=>n.tagName==='svg');if(!svg)throw new Error(t("SVG 结构无效"));
   let count=0,animations=0;const ids=new Set<string>();

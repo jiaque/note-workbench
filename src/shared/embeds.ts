@@ -27,7 +27,12 @@ export async function hydrateResources(rendered: Rendered, origin: string, resol
       const src = attr(node,'src');
       if (src && !/^(?:https?:|data:)/i.test(src)) {
         try {const resource=await resolve(origin, attr(node,'data-vault-image') ?? src);if(node.tagName==='img'&&resource.extension==='.svg'&&resource.source!==undefined){const image=svgImage(resource.source);set(node,'src',image.src);set(node,'data-nw-svg-static',image.staticSrc);if(image.tips)set(node,'data-nw-svg-tips',image.tips);}else set(node,'src',resource.url); }
-        catch { set(node,'alt',t("图片缺失：") + (attr(node,'alt') || src)); }
+        catch (error) {
+          let label=attr(node,'alt') || src;try{label=decodeURIComponent(label);}catch{/* Keep malformed escapes readable. */}
+          const reason=error instanceof Error?error.message:String(error);
+          set(node,'alt',t("图片加载失败：")+label+' — '+reason);
+          set(node,'title',reason);
+        }
       }
     }
     const target = attr(node,'data-embed');

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Accept and discard the standard SVG 1.1 public doctype emitted by plotting tools without loading a DTD; retain entity and active-content restrictions. Show readable image paths and actual loading errors instead of reporting all failures as missing files.
+
 ## 0.6.2 — 2026-09-22
 
 - Give tables inside callouts accent-tinted headers, alternating row backgrounds and borders in rendered views and PDF output, following the nearest callout color.
