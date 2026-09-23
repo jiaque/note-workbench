@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Rebase table actions after edits elsewhere in a note instead of rejecting a valid unchanged table. Separate the block-delete button from the table's add-column hit area.
+
 - Treat standalone navigation anchors as part of the following block and standalone Obsidian block IDs as part of the preceding block when deleting. Preserve next-section anchors and focus visible content after deletion. Delete balanced HTML containers across Markdown node boundaries without leaving closing tags.
 
 - Remove adjacent blank separators when deleting blocks so repeated insert/delete cycles do not expand spacing. Allow excess blank gaps to be deleted, and reuse Markdown syntax trees across live preview and formatting controls to reduce typing work.

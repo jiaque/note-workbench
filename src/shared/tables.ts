@@ -5,6 +5,11 @@ import { applyReplacements, type Replacement } from './edits';
 export interface Cell { from: number; to: number; raw: string; outerFrom?: number; outerTo?: number; tag?: string }
 export interface Row { from: number; to: number; cells: Cell[]; section: string }
 export interface Table { from: number; to: number; format: 'markdown' | 'html'; rows: Row[]; separator?: string[]; reason?: string; columns?:{from:number;to:number;html:string;groupFrom:number;groupTo:number}[] }
+export function rebaseUnchangedTable(table:Table,before:string,source:string,from=table.from):Table {
+  const text=before.slice(table.from,table.to),to=from+text.length;
+  if(from<0||source.slice(from,to)!==text)throw new Error(t('表格已变化，请重新选择单元格。'));
+  return table.format==='markdown'?markdownTable(source,from,to):htmlTables(source,from,to)[0];
+}
 export type TableOperation =
   | { kind: 'setCell'; row: number; column: number; text: string }
   | { kind: 'insertRow'; at: number; row: number }

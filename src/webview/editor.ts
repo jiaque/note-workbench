@@ -6,7 +6,7 @@ import { ChangeSet, EditorState, Transaction } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { defaultKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
-import { editTable, markdownTable, htmlTables, newMarkdownTable, type Table, type TableOperation } from '../shared/tables';
+import { editTable, markdownTable, htmlTables, newMarkdownTable, rebaseUnchangedTable, type Table, type TableOperation } from '../shared/tables';
 import { applyReplacements, minimalEdit } from '../shared/edits';
 import type { Snapshot } from '../shared/protocol';
 import { LiveSync } from '../shared/live-sync';
@@ -148,6 +148,13 @@ function tableElement(table: Table, html: string): HTMLElement {
   let tableSource = editor?.state.doc.toString() ?? snapshot!.source;
   const wrapper = document.createElement('section'); wrapper.className = 'table-card';
   wrapper.dataset.sourceFrom = String(table.from);
+  const refreshSource=()=>{
+    const current=editor?.state.doc.toString()??sync.local;
+    if(current===tableSource)return;
+    const widget=wrapper.closest('.live-widget');
+    const from=editor&&widget?editor.posAtDOM(widget):table.from;
+    table=rebaseUnchangedTable(table,tableSource,current,from);tableSource=current;wrapper.dataset.sourceFrom=String(table.from);
+  };
   wrapper.setAttribute('aria-label', t('{format} 表格',{format:table.format === 'markdown' ? 'Markdown' : 'HTML'}));
   const menu = document.createElement('details'); menu.className = 'table-menu';
   const menuToggle = document.createElement('summary'); menuToggle.textContent = '···'; menuToggle.setAttribute('aria-label', t("表格操作")); menu.append(menuToggle);
@@ -162,9 +169,9 @@ function tableElement(table: Table, html: string): HTMLElement {
   refreshTarget(); tools.append(targetLabel);
   const execute = (op: TableOperation) => {
     if (!snapshot || sync.conflict) return;
-    if ((editor?.state.doc.toString() ?? snapshot.source) !== tableSource) { info(t("表格已变化，请重新选择单元格。"), true); return; }
     try {
       flushCell?.();
+      refreshSource();
       const row=op.kind==='insertRow'?op.at:op.kind==='moveRow'?op.to:op.kind==='deleteRow'?Math.min(op.row,table.rows.length-2):rowIndex;
       const column=op.kind==='insertColumn'?op.at:op.kind==='moveColumn'?op.to:op.kind==='deleteColumn'?Math.min(op.column,table.rows[0].cells.length-2):columnIndex;
       pendingCell={from:table.from,row:Math.max(0,row),column:Math.max(0,column)};
@@ -279,6 +286,7 @@ function tableElement(table: Table, html: string): HTMLElement {
         const edit = (point?:{x:number;y:number}) => {
           if (sync.conflict || td.querySelector('.cell-editor')) return;
           flushCell?.();
+          try{refreshSource();}catch(error){info(String(error instanceof Error?error.message:error),true);return;}
           const cellText=()=>table.rows[r].cells[c].raw.trim().replace(/<br\s*\/?\s*>/gi,'\n');
           const originalHTML=td.innerHTML,originalValue=cellText();
           const host=document.createElement('div');host.className='cell-editor';td.replaceChildren(host);
@@ -287,6 +295,7 @@ function tableElement(table: Table, html: string): HTMLElement {
           const updateCell=()=>{
             if(composingCell||sync.conflict||finished||value()===cellText())return;
             try{
+              refreshSource();
               const changes=editTable(tableSource,table,{kind:'setCell',row:r,column:c,text:table.format==='html'?value().replace(/\n/g,'<br>'):value()});
               const next=applyReplacements(tableSource,changes),end=table.to+next.length-tableSource.length;
               cellRecovery={source:tableSource,replacements:changes};
