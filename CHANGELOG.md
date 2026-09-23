@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Keep block previews and source selections active when opening formatting menus; restore selections across host undo/redo so formatting can continue immediately. Use chain-link and highlighted-A toolbar icons.
+
 - Add contextual formatting controls, source caret/selection hints in block previews, local image/file path completion and URL paste over selected text.
 - Add a hover-only paragraph insertion button between top-level blocks; its right-click menu inserts tables or managed Markdown TOCs and dismisses when the pointer moves away.
 - Add configurable H1–H6 TOC ranges, automatic/manual updates, per-heading exclusion, bilingual settings and a writing-helpers example.

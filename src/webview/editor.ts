@@ -18,6 +18,7 @@ import {findHeading} from '../shared/anchors';
 import {blankLinesBetween} from '../shared/block-spacing';
 import {wikiCompletion} from './wiki-completion';
 import {formattingKeys} from './formatting';
+import {historySelection} from './history-selection';
 import {pasteLinks,selectionToolbar,setToolbarEnabled} from './authoring-toolbar';
 import {BlockInsert,updateTocs,editToc} from './block-insert';
 import {insertBlock,managedTocs} from '../shared/authoring';
@@ -461,7 +462,7 @@ function render() {
     editor = new EditorView({
       parent:content,
       state:EditorState.create({doc:sync.local,selection:{anchor:Math.min(savedSelection.anchor,sync.local.length),head:Math.min(savedSelection.head,sync.local.length)},extensions:[
-        markdown(), findDecorations, formattingKeys,pasteLinks,selectionToolbar,wikiCompletion(message=>api.postMessage(message)),keymap.of([
+        markdown(), findDecorations, formattingKeys,historySelection,pasteLinks,selectionToolbar,wikiCompletion(message=>api.postMessage(message)),keymap.of([
           ...(['Home','End'] as const).map(key=>({key,run:(view:EditorView)=>{const line=view.state.doc.lineAt(view.state.selection.main.head);view.dispatch({selection:{anchor:key==='Home'?line.from:line.to},scrollIntoView:true});return true;},shift:(view:EditorView)=>{const selection=view.state.selection.main,line=view.state.doc.lineAt(selection.head);view.dispatch({selection:{anchor:selection.anchor,head:key==='Home'?line.from:line.to},scrollIntoView:true});return true;}})),
           ...defaultKeymap,
         ]), EditorView.lineWrapping,
