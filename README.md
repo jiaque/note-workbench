@@ -57,6 +57,17 @@ For a walkthrough, download or clone this repository, open the entire [example](
 
 ## Core features
 
+### Writing helpers
+
+- While editing, the floating preview includes formatting controls (headings, bold, italic, strikethrough, code, links, highlighting, lists and quotes). Selected source text is highlighted in the preview; a thin caret follows the source caret. HTML attributes and graphical objects use an outline when a text position cannot be mapped. Table cells have a compact selection toolbar.
+- Hover between top-level blocks to reveal **+**. Left-click inserts and focuses an ordinary paragraph. Right-click **+** opens a small menu for a table or table of contents. Moving away, scrolling, Escape or clicking elsewhere closes the menu.
+- Type a local image/file destination in `![](...)` or `[](...)` to complete paths relative to the note. Folder entries end in `/`; Chinese filenames and spaces are supported. Select text and paste an HTTP(S) URL to create a link.
+- A generated table of contents defaults to H2–H3 and updates after editing pauses. Hover over it and choose **⋯** to change heading levels, turn automatic updates off, refresh or delete it. **Note actions → Update table of contents** refreshes managed directories manually. Add `<!-- nw:toc-ignore -->` at the end of a heading to exclude it. Code blocks and nested headings are excluded.
+
+Generated TOCs are ordinary Markdown links between `<!-- nw:toc ... -->` and `<!-- /nw:toc -->` comments. Handwritten navigation is never rewritten. Links use Note Workbench's heading identifiers; other Markdown renderers can use different anchor rules. Do not remove the comments if you want automatic updates.
+
+Settings `noteWorkbench.editor.formatToolbar.enabled`, `noteWorkbench.editor.previewSelection.enabled`, and `noteWorkbench.editor.toc.autoUpdate` default to enabled. Preview highlights and editing controls are not written into Markdown or PDF. Try [Writing helpers](example/Writing-helpers.md).
+
 | Area | Included |
 | --- | --- |
 | Editing | Live Preview, reading/source views, optional floating block preview, save, Auto Save and native undo/redo |

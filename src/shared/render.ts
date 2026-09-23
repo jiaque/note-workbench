@@ -18,11 +18,12 @@ import { AllPackages } from 'mathjax-full/js/input/tex/AllPackages.js';
 import {cleanStyle} from './css-styles';
 import {effectAttributes} from './effects';
 import {isolateSvg} from './svg-image';
+import {annotatePreview} from './preview-map';
 
 export interface Block { from: number; to: number; kind: string; html: string; source: string }
 export interface Rendered { blocks: Block[]; tables: Table[]; classes?: string[] }
 const parser = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ['yaml']).use(remarkMath).use(obsidianSyntax);
-const createRenderer = () => unified().use(remarkRehype, { allowDangerousHtml: true, footnoteLabel: t("脚注"), footnoteBackLabel:t('返回正文') }).use(rehypeRaw)
+const createRenderer = (preview=false) => unified().use(remarkRehype, { allowDangerousHtml: true, footnoteLabel: t("脚注"), footnoteBackLabel:t('返回正文') }).use(rehypeRaw)
   .use(() => (tree: any) => isolateSvg(tree))
   .use(() => (tree: any) => filterStyles(tree))
   .use(rehypeSanitize, {
@@ -39,6 +40,7 @@ const createRenderer = () => unified().use(remarkRehype, { allowDangerousHtml: t
   .use(() => (tree: any) => transformCallouts(tree))
   .use(() => (tree: any) => highlightCode(tree))
   .use(rehypeMathjax, { svg: { fontCache: 'none' }, tex: { packages: AllPackages.filter(name=>!['html','action','noerrors'].includes(name)), maxBuffer: 20000, maxMacros: 1000 } })
+  .use(()=> (tree:any)=>{if(preview)annotatePreview(tree);})
   .use(rehypeStringify);
 
 function highlightCode(node: any) {
@@ -84,13 +86,16 @@ function transformCallouts(node: any) {
   const match = /^\[!([\w-]+)\]([+-]?)[ \t]*/.exec(first.value);
   if (!match) return;
   first.value = first.value.slice(match[0].length);
+  if(first.position)first.position={...first.position,start:{...first.position.start,offset:first.position.start.offset+match[0].length}};
   const title: any[] = [], body: any[] = [];
   let inBody = false;
   for (const child of paragraph.children) {
     if (!inBody && child.type === 'text' && child.value.includes('\n')) {
       const split = child.value.indexOf('\n');
-      title.push({ ...child, value: child.value.slice(0, split) });
-      body.push({ ...child, value: child.value.slice(split + 1) }); inBody = true;
+      // Split ranges conservatively: multiline quote prefixes do not correspond
+      // one-for-one with visible text, so the body uses its container outline.
+      title.push({ ...child, value: child.value.slice(0, split),position:child.position?{...child.position,end:{...child.position.end,offset:child.position.start.offset+split}}:undefined });
+      body.push({ ...child, value: child.value.slice(split + 1),position:undefined }); inBody = true;
     } else (inBody ? body : title).push(child);
   }
   const type = match[1].toLowerCase();
@@ -104,8 +109,8 @@ function transformCallouts(node: any) {
   node.children = [titleNode, ...(body.length ? [{ ...paragraph, children: body }] : []), ...rest];
 }
 
-export function renderDocument(source: string): Rendered {
-  const renderer = createRenderer();
+export function renderDocument(source: string,preview=false): Rendered {
+  const renderer = createRenderer(preview);
   let root: any = parser.parse(source);
   const masked = maskComments(source, root);
   if (masked !== source) root = parser.parse(masked);

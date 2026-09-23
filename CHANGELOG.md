@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add contextual formatting controls, source caret/selection hints in block previews, local image/file path completion and URL paste over selected text.
+- Add a hover-only paragraph insertion button between top-level blocks; its right-click menu inserts tables or managed Markdown TOCs and dismisses when the pointer moves away.
+- Add configurable H1–H6 TOC ranges, automatic/manual updates, per-heading exclusion, bilingual settings and a writing-helpers example.
+
 - Accept and discard the standard SVG 1.1 public doctype emitted by plotting tools without loading a DTD; retain entity and active-content restrictions. Show readable image paths and actual loading errors instead of reporting all failures as missing files.
 
 ## 0.6.2 — 2026-09-22

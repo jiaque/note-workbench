@@ -21,5 +21,8 @@
   "command.openSource": "Note Workbench: Open Source",
   "command.rebuildIndex": "Note Workbench: Refresh Graph",
   "command.openGraph": "Note Workbench: Open Graph",
-  "view.graph": "Graph"
+  "view.graph": "Graph",
+  "config.editor.formatToolbar.enabled": "Show contextual formatting controls while editing.",
+  "config.editor.previewSelection.enabled": "Mirror the source caret and selection in the block preview.",
+  "config.editor.toc.autoUpdate": "Automatically update managed tables of contents after edits."
 }

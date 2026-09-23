@@ -15,6 +15,7 @@ import {noteCandidates} from './shared/note-links';
 import {blockRemoteImages} from './shared/remote-images';
 import {TagsProvider} from './tags-provider';
 import {registerRenameLinks} from './rename-provider';
+import {completePaths} from './path-completion';
 
 export const viewType = 'noteWorkbench.editor';
 
@@ -47,7 +48,7 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
       try{const file=await realpath(path.resolve(vaultRoot,relativePath)),relative=path.relative(vaultRoot,file);if(relative.startsWith('..')||path.isAbsolute(relative)||path.extname(file).toLowerCase()!=='.css')continue;styleSheets.push(vscode.Uri.file(file));}catch{/* Missing custom styles do not prevent opening a note. */}
     }
     panel.webview.html = this.html(panel.webview,styleSheets,vscode.workspace.getConfiguration('noteWorkbench',document.uri).get('render.remoteImages',true));
-    const sendSettings=()=>panel.webview.postMessage({type:'settings',blockPreview:vscode.workspace.getConfiguration('noteWorkbench',document.uri).get('editor.blockPreview.enabled',true),motionEnabled:vscode.workspace.getConfiguration('noteWorkbench',document.uri).get('render.motion.enabled',true)});
+    const sendSettings=()=>panel.webview.postMessage({type:'settings',formatToolbar:vscode.workspace.getConfiguration('noteWorkbench',document.uri).get('editor.formatToolbar.enabled',true),previewSelection:vscode.workspace.getConfiguration('noteWorkbench',document.uri).get('editor.previewSelection.enabled',true),autoToc:vscode.workspace.getConfiguration('noteWorkbench',document.uri).get('editor.toc.autoUpdate',true),blockPreview:vscode.workspace.getConfiguration('noteWorkbench',document.uri).get('editor.blockPreview.enabled',true),motionEnabled:vscode.workspace.getConfiguration('noteWorkbench',document.uri).get('render.motion.enabled',true)});
     const config=vscode.workspace.onDidChangeConfiguration(event=>{if(event.affectsConfiguration('noteWorkbench',document.uri))void sendSettings();});
     let disposed = false, renderRequest = 0, acknowledgedOperation: string | undefined;
     const sendSnapshot = async (operationId?: string) => {
@@ -80,7 +81,7 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
         const request=++previewRequest;
         void (async()=>{
           try{
-            const rendered=renderDocument(message.source);
+            const rendered=renderDocument(message.source,true);
             rendered.blocks=rendered.blocks.filter(block=>block.from>=message.from&&block.to<=message.to&&block.kind!=='footnotes');
             await hydrateResources(rendered,document.uri.toString(),async(origin,target)=>this.resolveResource(vscode.Uri.parse(origin),target,panel.webview));
             if(!vscode.workspace.getConfiguration('noteWorkbench',document.uri).get('render.remoteImages',true))blockRemoteImages(rendered);
@@ -90,6 +91,9 @@ export class NotebookProvider implements vscode.CustomTextEditorProvider, vscode
       }
       if(message?.type==='complete'&&Number.isInteger(message.requestId)&&typeof message.query==='string'&&message.query.length<1000){
         void this.index.completions(document.uri,message.query).then(options=>panel.webview.postMessage({type:'completions',requestId:message.requestId,options}));return;
+      }
+      if(message?.type==='completePath'&&Number.isInteger(message.requestId)&&typeof message.query==='string'&&message.query.length<1000){
+        void completePaths(document.uri,message.query,message.images===true).then(options=>panel.webview.postMessage({type:'completions',requestId:message.requestId,options}));return;
       }
       const key = document.uri.toString();
       const next = (this.queues.get(key) ?? Promise.resolve()).then(async () => {

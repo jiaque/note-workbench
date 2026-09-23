@@ -12,6 +12,20 @@ export function t(key:keyof typeof english,values:Record<string,string|number>={
   return text.replace(/\{(\w+)\}/g,(match,name)=>Object.hasOwn(values,name)?String(values[name]):match);
 }
 export const english = {
+  '更新目录':'Update table of contents',
+  '删除目录':'Delete table of contents',
+  '自动更新目录':'Update table of contents automatically',
+  '结束级别':'Last heading level',
+  '起始级别':'First heading level',
+  '目录设置':'Table of contents settings',
+  '插入目录':'Insert table of contents',
+  '插入段落':'Insert paragraph',
+  '有序列表':'Ordered list',
+  '列表':'List',
+  '高亮':'Highlight',
+  '正文':'Paragraph',
+  '段落样式':'Paragraph style',
+  '快捷格式':'Quick formatting',
   '筛选标签（留空显示全部）':'Filter tags (leave empty to show all)',
   '打开笔记':'Open note',
   '笔记在重命名期间发生变化，请检查引用。':'A note changed during rename. Please check its links.',

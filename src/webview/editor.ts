@@ -18,6 +18,9 @@ import {findHeading} from '../shared/anchors';
 import {blankLinesBetween} from '../shared/block-spacing';
 import {wikiCompletion} from './wiki-completion';
 import {formattingKeys} from './formatting';
+import {pasteLinks,selectionToolbar,setToolbarEnabled} from './authoring-toolbar';
+import {BlockInsert,updateTocs,editToc} from './block-insert';
+import {insertBlock,managedTocs} from '../shared/authoring';
 import {createElement, Table2, Tag, FileDown, Play, Pause, RotateCcw, Code2, Save, ChevronLeft, Square, SquareCheck, type IconNode} from 'lucide';
 import {loadMermaid} from './mermaid';
 import {enhanceEffects,setMotion,toggleMotion,isMotionPaused,replaySvg} from './effects';
@@ -52,6 +55,9 @@ let disposeMedia: (()=>void)[]=[];
 const root = document.getElementById('app')!;
 root.innerHTML = `<details class="document-menu"><summary aria-label="${t("笔记操作")}" title="${t("笔记操作")}">···</summary><nav aria-label="${t("笔记操作")}"></nav></details><div id="status" role="status" aria-live="polite"></div><main id="content"></main>`;
 const content = document.getElementById('content')!;
+const blockInsert=new BlockInsert(()=>editor,()=>mode==='edit'&&!sourceMode&&!sync.conflict,at=>insertTable(at));
+let tocTimer:ReturnType<typeof setTimeout>|undefined;
+let autoToc=true;
 isolateEditorShortcuts(content);
 const noteFind=new NoteFind(content,()=>editor,()=>{flushCell?.();flush();});
 const status = document.getElementById('status')!;
@@ -298,7 +304,7 @@ function tableElement(table: Table, html: string): HTMLElement {
             finish();if(target){target.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0}));}else if(step===1&&index===table.rows.length*columns){columnIndex=0;execute({kind:'insertRow',at:table.rows.length,row:table.rows.length-1});}else editor?.focus();
           };
           cellView=new EditorView({parent:host,state:EditorState.create({doc:originalValue,extensions:[
-            markdown(),EditorView.lineWrapping,formattingKeys,wikiCompletion(message=>api.postMessage(message)),
+            markdown(),EditorView.lineWrapping,formattingKeys,pasteLinks,selectionToolbar,wikiCompletion(message=>api.postMessage(message)),
             livePreview(()=>document.createElement('span'),true),
             EditorView.contentAttributes.of({'aria-label':t('编辑第 {row} 行第 {column} 列',{row:r+1,column:c+1})}),
             keymap.of([{key:'Tab',run:()=>{move(1);return true;}},{key:'Shift-Tab',run:()=>{move(-1);return true;}},{key:'Escape',run:()=>{finish();td.focus();return true;}},{key:'Shift-Enter',run:view=>{if(composingCell||view.composing)return false;view.dispatch(view.state.replaceSelection('\n'));return true;}},{key:'Enter',run:view=>{if(composingCell||view.composing)return false;finish();td.focus();return true;}},...defaultKeymap]),
@@ -368,6 +374,11 @@ function blockElement(block: Block, view?: EditorView): HTMLElement {
   const section = document.createElement('section'); section.className = 'note-block live-block';
   const body = document.createElement('div'); body.className = 'rendered'; body.innerHTML = block.html; section.append(body);
   body.dataset.nwIdentity=String(block.from)+':'+block.source;
+  const toc=managedTocs(currentSource).find(toc=>block.from>=toc.from&&block.to<=toc.to);
+  if(toc&&(block.kind==='list'||block.from===toc.from&&!currentSource.slice(toc.from,toc.to).includes('\n- ['))){
+    section.classList.add('managed-toc');if(!body.textContent?.trim())body.textContent=t('目录设置');
+    const controls=button('···',()=>{if(!editor){mode='edit';render();}if(editor)editToc(editor,block.from);},'toc-settings');controls.setAttribute('aria-label',t('目录设置'));section.append(controls);
+  }
   for (const task of body.querySelectorAll<HTMLInputElement>('li[data-task-offset] > input[type="checkbox"],li[data-task-offset] > p > input[type="checkbox"]')) {
     const item = task.closest<HTMLElement>('[data-task-offset]')!, offset = Number(item.dataset.taskOffset);
     task.disabled = !!snapshot?.readonly; task.setAttribute('aria-label',item.textContent?.trim() || t("任务"));
@@ -423,19 +434,20 @@ function navigation() {
   });
   const save=row(t("保存"),Save,()=>request('save'));
   const shortcut=document.createElement('span');shortcut.className='note-menu-trailing';shortcut.textContent='Ctrl+S';save.append(shortcut);
-  nav.replaceChildren(modes,divider(),insert,properties,row(t("导出 PDF"),FileDown,()=>request('exportPdf')),divider(),motion,row(t("在 VS Code 中编辑"),Code2,()=>request('source')),divider(),save);
+  nav.replaceChildren(modes,divider(),insert,row(t('更新目录'),RotateCcw,()=>{if(!editor){mode='edit';render();}if(editor)updateTocs(editor,true);}),properties,row(t("导出 PDF"),FileDown,()=>request('exportPdf')),divider(),motion,row(t("在 VS Code 中编辑"),Code2,()=>request('source')),divider(),save);
   if (sync.conflict) nav.append(button(t("对比冲突内容"),()=>api.postMessage({type:'compare',source:sync.local})),button(t("另存本地草稿"),()=>api.postMessage({type:'recover',source:sync.local})),button(t("采用外部版本"),()=>{if(!confirm(t("采用外部版本将放弃当前未同步草稿。请先对比或另存草稿。")))return;sync.pending=undefined;sync.conflict=false;sync.local=sync.source;cellRecovery=undefined;remember();render();info(t("已载入外部版本。"));}),button(t("复制保留的编辑内容"), () => { void navigator.clipboard.writeText(sync.local); }));
 }
-function insertTable(){
+function insertTable(boundary?:number){
   if(!editor||sync.conflict||snapshot?.readonly)return;
-  flushCell?.();const view=editor,position=view.state.selection.main.head;
+  flushCell?.();const view=editor,position=boundary??view.state.selection.main.head;
   const dialog=document.createElement('dialog');dialog.className='insert-table-dialog';
   dialog.innerHTML=`<form method="dialog"><strong>${t("插入 Markdown 表格")}</strong><label>${t("数据行数")}<input name="rows" aria-label="${t("数据行数")}" type="number" min="1" max="100" value="3" required></label><label>${t("列数")}<input name="columns" aria-label="${t("列数")}" type="number" min="1" max="50" value="3" required></label><p>${t("表头另计一行。")}</p><button value="cancel" formnovalidate>${t("取消")}</button><button value="insert">${t("插入")}</button></form>`;
-  document.body.append(dialog);dialog.addEventListener('close',()=>{if(dialog.returnValue==='insert'&&editor===view){try{const rows=Number(dialog.querySelector<HTMLInputElement>('[name="rows"]')!.value),columns=Number(dialog.querySelector<HTMLInputElement>('[name="columns"]')!.value);const source=view.state.doc.toString(),line=view.state.doc.lineAt(position),at=line.to,insert='\n\n'+newMarkdownTable(rows,columns)+'\n\n';pendingCell={from:at+2,row:1,column:0};commit([{from:at,to:at,insert,expectedText:''}]);}catch(error){info(String(error),true);}}dialog.remove();view.focus();});dialog.showModal();
+  document.body.append(dialog);dialog.addEventListener('close',()=>{if(dialog.returnValue==='insert'&&editor===view){try{const rows=Number(dialog.querySelector<HTMLInputElement>('[name="rows"]')!.value),columns=Number(dialog.querySelector<HTMLInputElement>('[name="columns"]')!.value);const source=view.state.doc.toString(),at=boundary??view.state.doc.lineAt(position).to,edit=insertBlock(source,at,newMarkdownTable(rows,columns));pendingCell={from:edit.anchor,row:1,column:0};commit([{from:at,to:at,insert:edit.insert,expectedText:''}]);}catch(error){info(String(error),true);}}dialog.remove();view.focus();});dialog.showModal();
 }
 function render() {
   if (!snapshot) return;
   floatingPreview.hide();
+  blockInsert.close();clearTimeout(tocTimer);
   const scroll = window.scrollY;
   if(editor) savedSelection={anchor:editor.state.selection.main.anchor,head:editor.state.selection.main.head};
   flushCell?.(); editor?.destroy(); editor = undefined;
@@ -449,7 +461,7 @@ function render() {
     editor = new EditorView({
       parent:content,
       state:EditorState.create({doc:sync.local,selection:{anchor:Math.min(savedSelection.anchor,sync.local.length),head:Math.min(savedSelection.head,sync.local.length)},extensions:[
-        markdown(), findDecorations, formattingKeys,wikiCompletion(message=>api.postMessage(message)),keymap.of([
+        markdown(), findDecorations, formattingKeys,pasteLinks,selectionToolbar,wikiCompletion(message=>api.postMessage(message)),keymap.of([
           ...(['Home','End'] as const).map(key=>({key,run:(view:EditorView)=>{const line=view.state.doc.lineAt(view.state.selection.main.head);view.dispatch({selection:{anchor:key==='Home'?line.from:line.to},scrollIntoView:true});return true;},shift:(view:EditorView)=>{const selection=view.state.selection.main,line=view.state.doc.lineAt(selection.head);view.dispatch({selection:{anchor:selection.anchor,head:key==='Home'?line.from:line.to},scrollIntoView:true});return true;}})),
           ...defaultKeymap,
         ]), EditorView.lineWrapping,
@@ -459,12 +471,13 @@ function render() {
         EditorView.updateListener.of(update => {
           if (update.docChanged && !update.transactions.some(tr => tr.annotation(Transaction.remote))) {
             sync.local = update.state.doc.toString(); remember(); schedule();
+            clearTimeout(tocTimer);if(autoToc)tocTimer=setTimeout(()=>{if(editor&&!sync.conflict)updateTocs(editor);},900);
           }
           if(update.docChanged||update.selectionSet||update.focusChanged)floatingPreview.update(update.view,mode==='edit'&&!sourceMode);
           if(update.docChanged)noteFind.changed();
         }),
         EditorView.domEventHandlers({
-          blur:()=>{setTimeout(()=>{flush();floatingPreview.update(editor,false);},0);},
+          blur:()=>{setTimeout(()=>{flush();floatingPreview.update(editor,mode==='edit'&&!sourceMode);},0);},
           compositionend: () => { setTimeout(() => { if (deferred) { const message=deferred; deferred=undefined; receive(message); } schedule();floatingPreview.update(editor,mode==='edit'&&!sourceMode); },30); },
         }),
       ]}),
@@ -516,7 +529,7 @@ window.addEventListener('message',event => {
   if(message?.type==='preview')floatingPreview.receive(message);
   else if(message?.type==='requestExportPdf')request('exportPdf');
   else if(message?.type==='navigateOffset'&&Number.isInteger(message.offset))navigateOffset(message.offset);
-  else if(message?.type==='settings'){setMotion(message.motionEnabled!==false);floatingPreview.enabled=message.blockPreview;floatingPreview.update(editor,mode==='edit'&&!sourceMode);}
+  else if(message?.type==='settings'){setMotion(message.motionEnabled!==false);floatingPreview.enabled=message.blockPreview!==false;floatingPreview.selectionEnabled=message.previewSelection!==false;setToolbarEnabled(message.formatToolbar!==false);autoToc=message.autoToc!==false;floatingPreview.update(editor,mode==='edit'&&!sourceMode);}
   else if (message?.type === 'snapshot') receive(message);
   else if (message?.type === 'navigate' && typeof message.fragment === 'string') { if (snapshot) navigate(message.fragment); else pendingNavigation=message.fragment; }
   else if (message?.type === 'conflict' || message?.type === 'error') {

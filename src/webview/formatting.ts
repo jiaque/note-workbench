@@ -2,12 +2,12 @@ import {t} from '../shared/i18n';
 import {EditorView,keymap} from '@codemirror/view';
 import {inlineFormatEdit} from '../shared/formatting';
 
-export type Format='bold'|'italic'|'strike'|'code'|'link'|'quote'|'bullet'|'task'|'heading';
+export type Format='bold'|'italic'|'strike'|'code'|'link'|'quote'|'bullet'|'task'|'heading'|'ordered'|'highlight';
 export const formats:[Format,string][]=[['bold',t("加粗")],['italic',t("斜体")],['strike',t("删除线")],['code',t("行内代码")],['link',t("链接")],['heading',t("二级标题")],['quote',t("引用")],['bullet',t("无序列表")],['task',t("任务列表")]];
 export function format(view:EditorView,kind:Format):boolean{
   if(view.state.readOnly||view.composing)return false;
   const selection=view.state.selection.main,source=view.state.doc,selected=source.sliceString(selection.from,selection.to);
-  const marks:Partial<Record<Format,string>>={bold:'**',italic:'*',strike:'~~',code:'`'};
+  const marks:Partial<Record<Format,string>>={bold:'**',italic:'*',strike:'~~',code:'`',highlight:'=='};
   const mark=marks[kind];
   if(mark){
     const edit=inlineFormatEdit(source.toString(),selection.from,selection.to,mark);
@@ -16,9 +16,12 @@ export function format(view:EditorView,kind:Format):boolean{
     const insert='['+(selected||t("链接文字"))+'](https://)';const from=selection.from+insert.indexOf('https://');
     view.dispatch({changes:{from:selection.from,to:selection.to,insert},selection:{anchor:from,head:from+8},userEvent:'input'});
   }else{
-    const from=source.lineAt(selection.from).from,to=source.lineAt(selection.to).to,prefix={quote:'> ',bullet:'- ',task:'- [ ] ',heading:'## '}[kind as 'quote'|'bullet'|'task'|'heading'];
-    const lines=source.sliceString(from,to).split('\n'),remove=lines.every(line=>line.startsWith(prefix));
-    const insert=lines.map(line=>remove?line.slice(prefix.length):prefix+line).join('\n');
+    const from=source.lineAt(selection.from).from,to=source.lineAt(selection.to).to,prefix={quote:'> ',bullet:'- ',task:'- [ ] ',heading:'## ',ordered:'1. '}[kind as 'quote'|'bullet'|'task'|'heading'|'ordered'];
+    const lines=source.sliceString(from,to).split('\n');
+    const pattern=kind==='ordered'?/^\d+[.)]\s+/:kind==='task'?/^[-+*]\s+\[[ xX]\]\s+/:kind==='bullet'?/^[-+*]\s+(?!\[)/:kind==='heading'?/^##\s+/:/^>\s?/;
+    const remove=lines.every(line=>pattern.test(line));
+    const listKind=['ordered','bullet','task'].includes(kind);
+    const insert=lines.map((line,index)=>remove?line.replace(pattern,''):(kind==='ordered'?`${index+1}. `:prefix)+(listKind?line.replace(/^(?:[-+*]|\d+[.)])\s+(?:\[[ xX]\]\s+)?/,''):line)).join('\n');
     view.dispatch({changes:{from,to,insert},selection:{anchor:from,head:from+insert.length},userEvent:'input'});
   }
   view.focus();return true;

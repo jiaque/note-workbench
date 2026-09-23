@@ -10,7 +10,7 @@ const root = resolve('dist/webview');
 const sourceFile=resolve(process.env.NOTE_WORKBENCH_PREVIEW_FILE || 'test/fixtures/vault/Welcome.md'), vault=dirname(sourceFile);
 let source = await readFile(sourceFile, 'utf8'), version = 1;
 const renderSource = async (text,range) => {
-  const rendered=renderDocument(text);
+  const rendered=renderDocument(text,!!range);
   if(range)rendered.blocks=rendered.blocks.filter(block=>block.from>=range.from&&block.to<=range.to&&block.kind!=='footnotes');
   await hydrateResources(rendered,sourceFile,async(origin,target)=>{
     const hash=target.indexOf('#'),name=hash<0?target:target.slice(0,hash),fragment=hash<0?'':target.slice(hash+1);let file=name?resolve(dirname(origin),decodeURIComponent(name)):origin;

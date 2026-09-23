@@ -23,6 +23,17 @@ export async function run() {
   try {
     await provider.resolveCustomTextEditor(document, fakePanel);
     incoming.fire({ type: 'ready' }); await waitFor(() => messages.some(m => m.type === 'snapshot'));
+    const attachment=vscode.Uri.joinPath(folder,'路径补全 测试.svg');
+    try{
+      await vscode.workspace.fs.writeFile(attachment,Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'));
+      incoming.fire({type:'completePath',requestId:901,query:'路径',images:true});
+      await waitFor(()=>messages.some(m=>m.type==='completions'&&m.requestId===901));
+      const options=messages.find(m=>m.requestId===901).options;
+      assert.ok(options.some((o:any)=>o.label==='路径补全 测试.svg'&&decodeURIComponent(o.insert)==='路径补全 测试.svg'));
+      incoming.fire({type:'completePath',requestId:902,query:'../../',images:false});await waitFor(()=>messages.some(m=>m.requestId===902));assert.deepEqual(messages.find(m=>m.requestId===902).options,[]);
+      assert.ok(messages.some(m=>m.type==='settings'&&m.formatToolbar&&m.previewSelection&&m.autoToc));
+      console.log('PASS: Unicode attachment completion, workspace boundary and authoring settings');
+    }finally{await vscode.workspace.fs.delete(attachment);}
     const baseVersion = document.version;
     assert.ok(messages.some(m=>m.type==='settings'&&m.blockPreview===true));
     assert.ok(messages.some(m=>m.type==='settings'&&m.motionEnabled===true),'Motion is enabled by default');
@@ -31,7 +42,7 @@ export async function run() {
     finally{await motionConfig.update('render.motion.enabled',oldMotion,vscode.ConfigurationTarget.Global);}
     incoming.fire({type:'preview',requestId:7,source:'> [!note] Preview\n> **fresh**',from:0,to:100});
     await waitFor(()=>messages.some(m=>m.type==='preview'&&m.requestId===7));
-    assert.match(messages.find(m=>m.type==='preview'&&m.requestId===7).html,/<strong>fresh<\/strong>/);
+    assert.match(messages.find(m=>m.type==='preview'&&m.requestId===7).html,/<strong\b[^>]*><span\b[^>]*>fresh<\/span><\/strong>/);
     assert.equal(document.version,baseVersion,'Preview must not edit or save the real document');
     incoming.fire({ type: 'edit', baseVersion, operationId: 'edit-1', replacements: [{ from: 2, to: 10, expectedText: 'Original', insert: 'Changed' }] });
     await waitFor(() => messages.some(m => m.operationId === 'edit-1'));

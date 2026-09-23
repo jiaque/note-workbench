@@ -7,6 +7,7 @@ Open this `example` folder in VS Code and start with [Welcome.md](Welcome.md). U
 | File / 文件 | Try / 体验 |
 | --- | --- |
 | [Welcome.md](Welcome.md) | Live Preview and block preview / 实时编辑及块预览浮层 |
+| [Writing-helpers.md](Writing-helpers.md) | Formatting, preview selection, insertion and TOC / 快捷格式、预览选区、块间插入及目录 |
 | [Tables.md](Tables.md) | Markdown and HTML tables / 单元格编辑、行列增删与排序 |
 | [Research.md](Research.md) | Equations, footnotes, aliases and a block ID / 公式、脚注、别名、块 ID |
 | [Roadmap.md](Roadmap.md) | Mermaid and a note embed / Mermaid 图及笔记嵌入 |

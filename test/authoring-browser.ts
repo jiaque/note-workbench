@@ -1,0 +1,43 @@
+import {EditorState} from '@codemirror/state';
+import {EditorView,keymap} from '@codemirror/view';
+import {history,undo,redo,defaultKeymap} from '@codemirror/commands';
+import {FormatToolbar,pasteLinks,selectionToolbar} from '../src/webview/authoring-toolbar';
+import {BlockPreview} from '../src/webview/block-preview';
+import {BlockInsert,updateTocs} from '../src/webview/block-insert';
+import {makeToc} from '../src/shared/authoring';
+import {mirrorSelection} from '../src/webview/preview-selection';
+import {livePreview,renderedBlocks} from '../src/webview/live-preview';
+import '../src/webview/editor.css';
+import '../src/webview/document.css';
+import '../src/webview/live-preview.css';
+
+const output=document.querySelector('output')!;
+const check=(ok:unknown,label:string)=>{if(!ok)throw new Error(label);};
+const wait=async(ms=50)=>new Promise(r=>setTimeout(r,ms));
+const view=new EditorView({parent:document.querySelector('main')!,state:EditorState.create({doc:'## First\n\nSame same and 中文文字\n\n## Last',extensions:[history(),keymap.of(defaultKeymap),pasteLinks,selectionToolbar,EditorView.lineWrapping]})});
+const bar=new FormatToolbar();document.body.append(bar.dom);
+const preview=new BlockPreview(message=>{const m=message as any;void fetch('/render',{method:'POST',body:JSON.stringify(m)}).then(r=>r.json()).then(reply=>preview.receive(reply));},()=>{});
+const insert=new BlockInsert(()=>view,()=>true,()=>{});
+try{
+  view.focus();let at=view.state.doc.toString().indexOf('中文');view.dispatch({selection:{anchor:at,head:at+4}});bar.update(view);
+  const bold=bar.dom.querySelector<HTMLButtonElement>('[aria-label="加粗"]')!;bold.click();check(view.state.doc.toString().includes('**中文文字**'),'toolbar applies bold');check(view.hasFocus,'toolbar retains focus');bar.update(view);bold.click();check(!view.state.doc.toString().includes('**'),'toolbar toggles bold off');
+  const before=view.state.doc.toString(),data=new DataTransfer();data.setData('text/plain','https://example.com/a(b)');view.contentDOM.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));check(view.state.doc.toString().includes('[中文文字](<https://example.com/a(b)>)'),'selection paste creates link');undo(view);check(view.state.doc.toString()===before,'paste undo');redo(view);check(view.state.doc.toString().includes('https://'),'paste redo');undo(view);
+  preview.update(view,true);await wait(450);const body=document.querySelector<HTMLElement>('.block-preview-body')!;check(!document.querySelector<HTMLElement>('.block-preview')!.hidden,'preview open');check(body.querySelectorAll('[data-nw-text]').length,'preview source mappings');check(body.querySelector('.preview-range'),'preview mirrors selection');
+  const same=before.indexOf('same');view.dispatch({selection:{anchor:same,head:same+4}});preview.update(view,true);await wait();check(body.querySelectorAll('.preview-range').length===1,'only second repeated word highlighted');const highlight=body.querySelector<HTMLElement>('.preview-range')!;check(parseFloat(highlight.style.width)>10,'highlight geometry');
+  view.dispatch({selection:{anchor:same+2}});preview.update(view,true);await wait();check(body.querySelector('.preview-caret'),'caret mirrored');
+  mirrorSelection(body,before,same,same+4,false);check(!body.querySelector('.preview-range,.preview-caret'),'selection setting off');preview.hide();
+  const end=view.state.doc.toString().indexOf('\n\n'),a=view.coordsAtPos(end)!,b=view.coordsAtPos(end+2)!;let y=(a.bottom+b.top)/2,x=view.contentDOM.getBoundingClientRect().left+5;
+  document.dispatchEvent(new PointerEvent('pointermove',{clientX:x,clientY:y,bubbles:true}));await wait();const plus=document.querySelector<HTMLButtonElement>('.block-insert-plus')!;check(!plus.hidden,'boundary plus appears');plus.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true}));check(!document.querySelector<HTMLElement>('.block-insert-menu')!.hidden,'right click opens menu');
+  document.dispatchEvent(new PointerEvent('pointermove',{clientX:innerWidth-2,clientY:innerHeight-2,bubbles:true}));await wait(350);check(document.querySelector<HTMLElement>('.block-insert-menu')!.hidden,'distant pointer dismisses menu');
+  document.dispatchEvent(new PointerEvent('pointermove',{clientX:x,clientY:y,bubbles:true}));await wait();const initial=view.state.doc.toString();plus.click();check(view.hasFocus,'new paragraph focused');check(view.state.doc.toString().length>initial.length,'left click inserted paragraph');undo(view);check(view.state.doc.toString()===initial,'insert undo');
+  const toc=makeToc(initial)+'\n\n'+initial;view.dispatch({changes:{from:0,to:view.state.doc.length,insert:toc}});view.dispatch({changes:{from:view.state.doc.length,insert:'\n\n### Added'}});updateTocs(view);check(view.state.doc.toString().includes('- [Added](#Added)'),'TOC updates new heading');
+  insert.close();view.destroy();bar.dom.remove();
+  const source='# Title\n\nA paragraph\n\n## End';
+  const live=new EditorView({parent:document.querySelector('main')!,state:EditorState.create({doc:source,extensions:[EditorView.lineWrapping,livePreview(block=>{const div=document.createElement('div');div.innerHTML=block.html;return div;})]})});
+  live.dispatch({effects:renderedBlocks.of([{from:0,to:7,source:'# Title',kind:'heading',html:'<h1>Title</h1>'},{from:9,to:20,source:'A paragraph',kind:'paragraph',html:'<p>A paragraph</p>'},{from:22,to:28,source:'## End',kind:'heading',html:'<h2>End</h2>'}])});
+  const liveInsert=new BlockInsert(()=>live,()=>true,()=>{});await wait();
+  const widgets=live.dom.querySelectorAll('.live-widget');check(widgets.length>=2,'real rendered widgets');const first=widgets[0].getBoundingClientRect(),second=widgets[1].getBoundingClientRect();
+  document.dispatchEvent(new PointerEvent('pointermove',{clientX:first.left+5,clientY:(first.bottom+second.top)/2,bubbles:true}));await wait();const livePlus=[...document.querySelectorAll<HTMLButtonElement>('.block-insert-plus')].at(-1)!;
+  check(!livePlus.hidden,'plus between real rendered widgets');livePlus.click();check(live.hasFocus,'real rendered paragraph insertion focus');check(live.state.selection.main.head>7&&live.state.selection.main.head<live.state.doc.toString().indexOf('A paragraph'),'inserts outside rendered blocks');liveInsert.close();
+  output.textContent='PASS: toolbar toggle/focus, URL paste undo/redo, preview selection/caret/repeated text/config, block insertion/menu dismissal/undo, TOC update';
+}catch(e){output.textContent='FAIL: '+String(e);console.error(e);}

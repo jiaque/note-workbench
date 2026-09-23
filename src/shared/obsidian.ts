@@ -71,7 +71,10 @@ export function transformObsidian(root: any, source: string) {
     if (node.type === 'obsidianInline') {
       const raw = node.value;
       if(raw.startsWith('#')) {node.type='link';node.url='nw-tag:'+encodeURIComponent(raw.slice(1));node.children=[text(raw)];node.data={hProperties:{className:['tag']}};}
-      else if (raw.startsWith('==')) { node.type = 'strong'; node.children = phrasing(raw.slice(2, -2)); node.data = { hName: 'mark' }; }
+      else if (raw.startsWith('==')) { node.type = 'strong'; node.children = phrasing(raw.slice(2, -2));
+        const base=(node.position?.start.offset??0)+2;
+        const rebase=(child:any)=>{if(child.position){child.position.start.offset+=base;child.position.end.offset+=base;}for(const item of child.children??[])rebase(item);};node.children.forEach(rebase);
+        node.data = { hName: 'mark' }; }
       else if (raw.startsWith('^[')) {
         let identifier: string; do { identifier = `nw-inline-${++nextFootnote}`; } while (source.includes(`[^${identifier}]`));
         footnotes.push({ type: 'footnoteDefinition', identifier, children: [{ type: 'paragraph', children: phrasing(raw.slice(2, -1)) }] });

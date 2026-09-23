@@ -34,7 +34,9 @@
     "pdf"
   ],
   "main": "./dist/extension.cjs",
-  "activationEvents": ["onStartupFinished"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": true
@@ -145,6 +147,27 @@
           "restricted": true,
           "description": "%config.pdf.browserPath%",
           "order": 100
+        },
+        "noteWorkbench.editor.formatToolbar.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "%config.editor.formatToolbar.enabled%",
+          "order": 21
+        },
+        "noteWorkbench.editor.previewSelection.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "%config.editor.previewSelection.enabled%",
+          "order": 22
+        },
+        "noteWorkbench.editor.toc.autoUpdate": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "%config.editor.toc.autoUpdate%",
+          "order": 23
         }
       }
     },
@@ -189,8 +212,16 @@
     ],
     "menus": {
       "view/title": [
-        {"command":"noteWorkbench.searchTags","when":"view == noteWorkbench.tags","group":"navigation"},
-        {"command":"noteWorkbench.rebuildIndex","when":"view == noteWorkbench.tags","group":"navigation"}
+        {
+          "command": "noteWorkbench.searchTags",
+          "when": "view == noteWorkbench.tags",
+          "group": "navigation"
+        },
+        {
+          "command": "noteWorkbench.rebuildIndex",
+          "when": "view == noteWorkbench.tags",
+          "group": "navigation"
+        }
       ],
       "explorer/context": [
         {
@@ -236,6 +267,7 @@
     "test:svg-tips": "node scripts/test-svg-tips.mjs",
     "test:motion": "node scripts/test-motion.mjs",
     "test:extension": "node scripts/test-extension.mjs",
+    "test:authoring": "node scripts/test-authoring.mjs",
     "preview": "node scripts/preview.mjs",
     "package": "npm run build && node scripts/licenses.mjs && vsce package --out artifacts/",
     "verify:package": "vsce ls --tree"

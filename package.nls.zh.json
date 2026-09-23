@@ -21,5 +21,8 @@
   "command.openSource": "Note Workbench: 打开源码",
   "command.rebuildIndex": "Note Workbench: 刷新连接图",
   "command.openGraph": "Note Workbench: 打开连接图",
-  "view.graph": "连接图"
+  "view.graph": "连接图",
+  "config.editor.formatToolbar.enabled": "编辑时显示快捷格式工具栏。",
+  "config.editor.previewSelection.enabled": "在块预览中同步显示源码光标与选区。",
+  "config.editor.toc.autoUpdate": "编辑后自动更新受管理的目录。"
 }
