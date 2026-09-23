@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Keep standalone anchors attached to their target during block insertion too; paragraph, table and TOC insertion no longer split the anchor from its following content.
+
 - Preserve safe SVG text-anchor and baseline CSS properties so external chart axis labels align like equivalent SVG presentation attributes.
 
 - Refresh inactive table cells and table source state while another cell remains focused, so inserted links render without extra spaces and subsequent editing does not reuse stale table data.

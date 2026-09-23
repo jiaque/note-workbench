@@ -2,6 +2,10 @@ import {parseFragment} from 'parse5';
 import {authoringTree,managedTocs} from './authoring';
 
 export interface EditableBlock {from:number;to:number;focus:number;blank?:boolean}
+export function insertionBlocks(source:string){
+  const yaml=authoringTree(source).children.filter((node:any)=>node.type==='yaml').map((node:any)=>({from:node.position.start.offset as number,to:node.position.end.offset as number,focus:node.position.start.offset as number,yaml:true}));
+  return [...deletableBlocks(source).filter(block=>!block.blank).map(block=>({...block,yaml:false})),...yaml].sort((a,b)=>a.from-b.from);
+}
 // Source ownership differs from Markdown AST nodes: an HTML container may span
 // several nodes, and a standalone anchor introduces the following visible block.
 export function deletableBlocks(source:string):EditableBlock[]{
