@@ -2,7 +2,7 @@ import {EditorView,ViewPlugin} from '@codemirror/view';
 import {format,type Format} from './formatting';
 import {t} from '../shared/i18n';
 import {pastedLink,authoringTree} from '../shared/authoring';
-import {createElement,Link} from 'lucide';
+import {createElement,Link,Bold,Italic,Strikethrough,CodeXml,Quote,type IconNode} from 'lucide';
 
 export let toolbarEnabled=true;
 export function setToolbarEnabled(value:boolean){toolbarEnabled=value;if(!value)document.querySelectorAll<HTMLElement>('.format-toolbar').forEach(el=>el.hidden=true);}
@@ -27,10 +27,10 @@ export class FormatToolbar {
     this.dom.className='format-toolbar';this.dom.setAttribute('role','toolbar');this.dom.setAttribute('aria-label',t('快捷格式'));
     this.dom.addEventListener('mousedown',e=>e.preventDefault());
     document.addEventListener('pointerdown',this.outside);document.addEventListener('keydown',this.escape,true);window.addEventListener('scroll',this.closeMenus,true);
-    const action=(kind:Format,label:string,title:string)=>{const b=document.createElement('button');b.textContent=label;b.title=title;b.setAttribute('aria-label',title);b.onclick=()=>{if(this.view)format(this.view,kind);};this.buttons.set(kind,b);this.dom.append(b);};
+    const icons:Partial<Record<Format,IconNode>>={bold:Bold,italic:Italic,strike:Strikethrough,code:CodeXml,link:Link,quote:Quote};
+    const action=(kind:Format,label:string,title:string)=>{const b=document.createElement('button');const icon=icons[kind];if(icon)b.append(createElement(icon,{width:20,height:20,'stroke-width':1.8,'aria-hidden':'true'}));else b.textContent=label;b.title=title;b.setAttribute('aria-label',title);b.onclick=()=>{if(this.view)format(this.view,kind);};this.buttons.set(kind,b);this.dom.append(b);};
     if(!inline){this.heading=this.dropdown(t('段落样式'),Array.from({length:7},(_,level)=>({label:level?'H'+level:t('正文'),run:()=>{const v=this.view;if(!v||v.state.readOnly||v.composing)return;const s=v.state.selection.main,a=v.state.doc.lineAt(s.from).from,b=v.state.doc.lineAt(s.to).to,prefix=level?'#'.repeat(level)+' ':'';const insert=v.state.sliceDoc(a,b).split('\n').map(l=>prefix+l.replace(/^#{1,6}\s+/,'')).join('\n');v.dispatch({changes:{from:a,to:b,insert},selection:{anchor:a,head:a+insert.length},userEvent:'input'});v.focus();}})));this.heading.textContent=t('正文');}
     action('bold','B',t('加粗'));action('italic','I',t('斜体'));action('strike','S̶',t('删除线'));action('code','</>',t('行内代码'));action('link','',t('链接'));action('highlight','',t('高亮'));
-    this.buttons.get('link')!.append(createElement(Link,{width:18,height:18,'stroke-width':1.8,'aria-hidden':'true'}));
     const highlighter=document.createElement('span');highlighter.textContent='A';highlighter.className='format-highlight-icon';highlighter.setAttribute('aria-hidden','true');this.buttons.get('highlight')!.append(highlighter);
     if(!inline){action('quote','❞',t('引用'));this.dropdown(t('列表'),(['bullet','ordered','task'] as const).map((kind,i)=>({label:[t('无序列表'),t('有序列表'),t('任务列表')][i],run:()=>{if(this.view)format(this.view,kind);}})));}
   }
