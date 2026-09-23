@@ -1,14 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.6.4 — 2026-09-23
 
-- Keep standalone anchors attached to their target during block insertion too; paragraph, table and TOC insertion no longer split the anchor from its following content.
+### Fixed
 
-- Preserve safe SVG text-anchor and baseline CSS properties so external chart axis labels align like equivalent SVG presentation attributes.
+- Fix insertion between standalone navigation anchors and their target blocks. Paragraphs, tables and TOCs now insert before the anchor, keeping navigation aligned with the target content.
 
-- Refresh inactive table cells and table source state while another cell remains focused, so inserted links render without extra spaces and subsequent editing does not reuse stale table data.
+- Fix shifted axis labels in external SVG charts by preserving safe text-anchor and baseline CSS properties.
 
-- Restrict blank-gap deletion outlines to actual empty line boxes, avoiding highlights that overlap adjacent rendered callouts or images.
+- Fix stale table editing state after leaving link insertion or switching cells. Inserted links render without requiring extra spaces, and cells remain editable.
+
+- Fix blank-gap deletion outlines overlapping neighboring callouts or images. The outline now covers only the empty lines being deleted.
 
 ## 0.6.3 — 2026-09-23
 
