@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Refresh inactive table cells and table source state while another cell remains focused, so inserted links render without extra spaces and subsequent editing does not reuse stale table data.
+
 - Restrict blank-gap deletion outlines to actual empty line boxes, avoiding highlights that overlap adjacent rendered callouts or images.
 
 ## 0.6.3 — 2026-09-23

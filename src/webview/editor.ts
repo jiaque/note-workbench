@@ -161,6 +161,22 @@ function tableElement(table: Table, html: string): HTMLElement {
   const tools = document.createElement('div'); tools.className = 'table-tools'; menu.append(tools);
   const renderedTable = document.createElement('template'); renderedTable.innerHTML = html;
   const renderedRows = Array.from(renderedTable.content.querySelector('table')?.rows ?? []);
+  const renderedValues=new Map<string,string>();
+  const rememberRenderedValues=()=>{table.rows.forEach((row,r)=>row.cells.forEach((cell,c)=>renderedValues.set(`${r}:${c}`,cell.raw.trim().replace(/<br\s*\/?\s*>/gi,'\n'))));};
+  rememberRenderedValues();
+  wrapper.addEventListener('nw-table-render',event=>{
+    const block=(event as CustomEvent<Block>).detail,current=editor?.state.doc.toString()??sync.local;
+    if(current.slice(block.from,block.to)!==block.source)return;
+    const next=table.format==='markdown'?markdownTable(current,block.from,block.to):htmlTables(current,block.from,block.to)[0];
+    if(!next||next.rows.length!==table.rows.length||next.rows.some((row,r)=>row.cells.length!==table.rows[r].cells.length))return;
+    table=next;tableSource=current;wrapper.dataset.sourceFrom=String(table.from);
+    const template=document.createElement('template');template.innerHTML=block.html;
+    renderedRows.splice(0,renderedRows.length,...Array.from(template.content.querySelector('table')?.rows??[]));rememberRenderedValues();
+    for(const td of wrapper.querySelectorAll<HTMLElement>('[data-cell-row][data-cell-column]')){
+      const cell=renderedRows[Number(td.dataset.cellRow)]?.cells[Number(td.dataset.cellColumn)];
+      if(cell&&!td.querySelector('.cell-editor'))td.innerHTML=cell.innerHTML;
+    }
+  });
   const caption = document.createElement('span'); caption.textContent = table.format.toUpperCase(); tools.append(caption);
   let rowIndex = table.format === 'markdown' && table.rows.length > 1 ? 1 : 0, columnIndex = 0;
   const targetLabel = document.createElement('span');
@@ -306,7 +322,8 @@ function tableElement(table: Table, html: string): HTMLElement {
             if(finished||composingCell)return;
             updateCell();const text=value();finished=true;flushCell=undefined;cellRecovery=undefined;
             cellView.destroy();
-            if(text===originalValue)td.innerHTML=originalHTML;else td.textContent=text;
+            if(renderedValues.get(`${r}:${c}`)===text&&renderedRows[r]?.cells[c])td.innerHTML=renderedRows[r].cells[c].innerHTML;
+            else if(text===originalValue)td.innerHTML=originalHTML;else td.textContent=text;
             setTimeout(()=>{if(!wrapper.contains(document.activeElement)&&snapshot?.source===sync.local)editor?.dispatch({effects:renderedBlocks.of(snapshot.blocks)});},0);
           };
           const move=(step:number)=>{

@@ -71,5 +71,11 @@ try{
   live.dispatch({changes:{from:0,to:live.state.doc.length,insert:large},selection:{anchor:large.length}});await wait(150);
   const durations:number[]=[];for(let i=0;i<20;i++){const start=performance.now();live.dispatch({changes:{from:live.state.doc.length,insert:'字'},selection:{anchor:live.state.doc.length+1}});durations.push(performance.now()-start);}
   await wait(180);check(live.state.doc.toString().endsWith('字'.repeat(20)),'rapid typing retains every character');
-  output.textContent='PASS: formatting, preview, insertion, blank gaps, delete/undo, TOC, rapid typing; max synchronous input '+Math.max(...durations).toFixed(1)+' ms';
+  let tableRender='';
+  const tableView=new EditorView({parent:document.querySelector('main')!,state:EditorState.create({doc:'| A |\n|---|\n| B |',extensions:[livePreview(block=>{const card=document.createElement('section');card.className='table-card';card.dataset.sourceFrom=String(block.from);card.innerHTML='<div class="cell-editor"><input aria-label="test active cell"></div>';card.addEventListener('nw-table-render',e=>tableRender=(e as CustomEvent).detail.html);return card;})]})});
+  const tableBlock={from:0,to:tableView.state.doc.length,source:tableView.state.doc.toString(),kind:'table',html:'<table><tr><td>Old</td></tr></table>'};tableView.dispatch({effects:renderedBlocks.of([tableBlock])});
+  const activeInput=tableView.dom.querySelector<HTMLInputElement>('input')!;activeInput.focus();tableView.dispatch({effects:renderedBlocks.of([{...tableBlock,html:'<table><tr><td><a href="https://example.com">New</a></td></tr></table>'}])});
+  check(document.activeElement===activeInput&&activeInput.isConnected,'table render preserves active cell');check(tableRender.includes('<a href='),'table delivers fresh markup while another cell is active');
+  tableView.destroy();
+  output.textContent='PASS: formatting, preview, insertion, blank gaps, delete/undo, TOC, active table refresh, rapid typing; max synchronous input '+Math.max(...durations).toFixed(1)+' ms';
 }catch(e){output.textContent='FAIL: '+String(e);console.error(e);}

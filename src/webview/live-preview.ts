@@ -18,11 +18,19 @@ export function livePreview(createBlock: (block: Block, view: EditorView) => HTM
       const activeTable = typeof document !== 'undefined' && document.activeElement?.closest('.cell-editor') ? document.activeElement.closest<HTMLElement>('.table-card') : null;
       if (this.block.from !== other.block.from || this.inline !== other.inline) return false;
       if (activeTable?.dataset.sourceFrom === String(this.block.from)) {
-        if (this.block.html !== other.block.html) dirtyTables.add(this.block.from);
+        if (this.block.html !== other.block.html){dirtyTables.add(this.block.from);return false;}
         return true;
       }
       if (dirtyTables.delete(this.block.from)) return false;
       return this.block.html === other.block.html;
+    }
+    updateDOM(dom:HTMLElement){
+      const active=document.activeElement?.closest('.cell-editor');
+      if(active&&dom.contains(active)){
+        dom.querySelector('.table-card')?.dispatchEvent(new CustomEvent('nw-table-render',{detail:this.block}));
+        return true;
+      }
+      return false;
     }
     toDOM(view: EditorView) {
       // CodeMirror measures the border box, not external/collapsed margins.
