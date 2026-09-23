@@ -22,9 +22,17 @@ export class BlockDelete {
     const area=view.contentDOM.getBoundingClientRect();if(x<area.left||x>Math.min(innerWidth,area.right+32)){this.hide();return;}
     const source=view.state.doc.toString();if(source!==this.cached){this.cached=source;this.blocks=deletableBlocks(source);}
     const widgets=[...view.dom.querySelectorAll<HTMLElement>('.live-widget')].filter(el=>el.closest('.cm-editor')===view.dom).map(el=>({position:view.posAtDOM(el),rect:el.getBoundingClientRect()}));
-    for(const block of this.blocks){const a=view.coordsAtPos(block.from,1),b=view.coordsAtPos(block.to,-1);if(!a||!b)continue;
-      const rendered=widgets.filter(w=>w.position>=block.from&&w.position<block.to);
-      const top=rendered.length?Math.min(...rendered.map(w=>w.rect.top)):a.top,bottom=rendered.length?Math.max(...rendered.map(w=>w.rect.bottom)):Math.max(a.bottom,b.bottom);if(y<top||y>bottom)continue;
+    for(const block of this.blocks){
+      // Gap endpoints touch replacement widgets. Measure actual blank lines,
+      // never the neighboring widgets' start/end coordinates.
+      const firstBreak=source.indexOf('\n',block.from);
+      const from=block.blank&&block.from>0&&firstBreak<block.to?firstBreak+1:block.from;
+      const to=block.blank?Math.max(from,block.to-1):block.to;
+      const a=view.coordsAtPos(from,1),b=view.coordsAtPos(to,-1);if(!a||!b)continue;
+      const rendered=block.blank?[]:widgets.filter(w=>w.position>=block.from&&w.position<block.to);
+      const lineBox=(pos:number)=>{const node=view.domAtPos(pos).node;return (node instanceof Element?node:node.parentElement)?.closest('.cm-line')?.getBoundingClientRect();};
+      const blankStart=block.blank?lineBox(from):undefined,blankEnd=block.blank?lineBox(to):undefined;
+      const top=blankStart?.top??(rendered.length?Math.min(...rendered.map(w=>w.rect.top)):a.top),bottom=blankEnd?.bottom??(rendered.length?Math.max(...rendered.map(w=>w.rect.bottom)):Math.max(a.bottom,b.bottom));if(y<top||y>bottom)continue;
       this.selected={view,source,...block};this.button.hidden=false;this.outline.hidden=this.tip.hidden=true;
       const tableCard=[...view.dom.querySelectorAll<HTMLElement>('.table-card')].find(el=>Number(el.dataset.sourceFrom)>=block.from&&Number(el.dataset.sourceFrom)<block.to);
       const add=tableCard?.querySelector<HTMLElement>('.add-column')?.getBoundingClientRect();
