@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Treat standalone navigation anchors as part of the following block and standalone Obsidian block IDs as part of the preceding block when deleting. Preserve next-section anchors and focus visible content after deletion. Delete balanced HTML containers across Markdown node boundaries without leaving closing tags.
+
 - Remove adjacent blank separators when deleting blocks so repeated insert/delete cycles do not expand spacing. Allow excess blank gaps to be deleted, and reuse Markdown syntax trees across live preview and formatting controls to reduce typing work.
 
 - Show the floating preview immediately after inserting an empty paragraph. Add a hover-only block delete button, a pale red outline only when hovering that button, and undo support.

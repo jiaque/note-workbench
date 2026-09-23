@@ -1,15 +1,9 @@
 import type {EditorView} from '@codemirror/view';
-import {authoringTree,managedTocs,deleteBlockEdit} from '../shared/authoring';
+import {deleteBlockEdit} from '../shared/authoring';
+import {deletableBlocks} from '../shared/block-ranges';
+export {deletableBlocks} from '../shared/block-ranges';
 import {t} from '../shared/i18n';
 
-export function deletableBlocks(source:string){
-  const tocs=managedTocs(source);
-  const nodes=authoringTree(source).children;
-  const blocks=[...nodes.filter((n:any)=>n.type!=='yaml'&&!tocs.some(t=>n.position.start.offset>=t.from&&n.position.end.offset<=t.to)).map((n:any)=>({from:n.position.start.offset as number,to:n.position.end.offset as number})),...tocs.map(({from,to})=>({from,to}))];
-  const boundaries=[0,...nodes.flatMap((n:any)=>[n.position.start.offset,n.position.end.offset]),source.length];
-  for(let i=0;i<boundaries.length;i+=2){const from=boundaries[i],to=boundaries[i+1],gap=source.slice(from,to);if(to>from&&/^\s+$/.test(gap)&&((from===0||to===source.length)||gap.split('\n').length>3)&&!tocs.some(t=>from>=t.from&&to<=t.to))blocks.push({from,to});}
-  return blocks.sort((a,b)=>a.from-b.from);
-}
 export class BlockDelete {
   private button=document.createElement('button');private outline=document.createElement('div');private tip=document.createElement('div');private toast=document.createElement('div');
   private selected?:{view:EditorView;source:string;from:number;to:number};private cached='';private blocks:ReturnType<typeof deletableBlocks>=[];private frame=0;private timer?:ReturnType<typeof setTimeout>;private deletedSource?:string;
@@ -37,7 +31,8 @@ export class BlockDelete {
     }this.hide();
   }
   private remove(){const selected=this.selected;if(!selected)return;this.flush();const {view,source,from,to}=selected;if(view!==this.getView()||view.state.doc.toString()!==source||view.state.readOnly||view.composing||!this.enabled()){this.hide();return;}
-    const edit=deleteBlockEdit(source,from,to),anchor=Math.min(edit.from+edit.insert.length,source.length-(edit.to-edit.from)+edit.insert.length);
+    const edit=deleteBlockEdit(source,from,to),next=this.blocks.find(b=>b.from>=edit.to&&b.to>b.from);
+    const anchor=next?next.focus-(edit.to-edit.from)+edit.insert.length:Math.min(edit.from+edit.insert.length,source.length-(edit.to-edit.from)+edit.insert.length);
     this.hide();view.dispatch({changes:edit,selection:{anchor},scrollIntoView:true,userEvent:'delete'});view.focus();
     this.deletedSource=view.state.doc.toString();const label=document.createElement('span');label.textContent=t('已删除当前块');const undo=document.createElement('button');undo.textContent=t('撤销');undo.onclick=()=>{if(this.getView()===view&&view.state.doc.toString()===this.deletedSource)this.undo();this.toast.hidden=true;};this.toast.replaceChildren(label,undo);this.toast.hidden=false;clearTimeout(this.timer);this.timer=setTimeout(()=>{this.toast.hidden=true;},5000);
   }

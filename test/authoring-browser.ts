@@ -1,6 +1,6 @@
 import {EditorState} from '@codemirror/state';
 import {EditorView,keymap} from '@codemirror/view';
-import {history,undo,redo,defaultKeymap} from '@codemirror/commands';
+import {history,undo,redo,defaultKeymap,isolateHistory} from '@codemirror/commands';
 import {FormatToolbar,pasteLinks,selectionToolbar} from '../src/webview/authoring-toolbar';
 import {BlockPreview} from '../src/webview/block-preview';
 import {BlockInsert,updateTocs} from '../src/webview/block-insert';
@@ -57,6 +57,11 @@ try{
   const complex='---\na: b\n---\n\n# Heading\n\n> [!note]\n> body\n>\n> | A |\n> |---|\n> | B |\n\n'+makeToc('## Chapter')+'\n\n## Chapter';
   const ranges=deletableBlocks(complex).map(b=>complex.slice(b.from,b.to));check(ranges.length===4,'top-level targets exclude frontmatter and merge TOC');check(ranges[1].includes('| B |'),'whole callout includes table');check(ranges[2].includes('nw:toc'),'TOC target includes markers');
   const blanks='before\n\n\n\n\nafter';check(deletableBlocks(blanks).some(b=>!blanks.slice(b.from,b.to).trim()),'extra blank gap is deletable');
+  const anchorSource='> [!success]+ Conclusion\n> Body\n\n<a id="trend"></a>\n\n## Trend\n\nFollowing';
+  live.dispatch({changes:{from:0,to:live.state.doc.length,insert:anchorSource},effects:renderedBlocks.of([]),selection:{anchor:3},annotations:isolateHistory.of('full')});await wait(150);enabled=true;
+  const calloutRect=live.coordsAtPos(3)!;live.contentDOM.dispatchEvent(new PointerEvent('pointermove',{clientX:live.contentDOM.getBoundingClientRect().left+8,clientY:(calloutRect.top+calloutRect.bottom)/2,bubbles:true}));await wait();check(!minus.hidden,'callout delete available');minus.click();
+  check(live.state.doc.toString()==='<a id="trend"></a>\n\n## Trend\n\nFollowing','delete preserves next section anchor');check(live.state.doc.lineAt(live.state.selection.main.head).text==='## Trend','deletion focuses visible heading rather than hidden anchor');
+  document.querySelector<HTMLButtonElement>('.block-delete-toast button')!.click();check(live.state.doc.toString()===anchorSource,'callout undo restores source exactly');enabled=false;
   const large=Array.from({length:150},(_,i)=>`## Section ${i}\n\nParagraph with **bold** text and [a link](https://example.com).\n\n`).join('');
   live.dispatch({changes:{from:0,to:live.state.doc.length,insert:large},selection:{anchor:large.length}});await wait(150);
   const durations:number[]=[];for(let i=0;i<20;i++){const start=performance.now();live.dispatch({changes:{from:live.state.doc.length,insert:'字'},selection:{anchor:live.state.doc.length+1}});durations.push(performance.now()-start);}
