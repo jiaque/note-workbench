@@ -1,6 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {insertBlock,makeToc,managedTocs,tocUpdates,pastedLink} from '../src/shared/authoring';
+import {insertBlock,deleteBlockEdit,parseAuthoring,authoringTree,makeToc,managedTocs,tocUpdates,pastedLink} from '../src/shared/authoring';
+
+test('insert/type/delete cycles do not accumulate blank lines; unrelated whitespace stays intact',()=>{
+  for(const eol of ['\n','\r\n']){
+    const original='before  '+eol+eol+'after'+eol+eol+eol+'untouched';let source=original;
+    for(let i=0;i<6;i++){
+      const at=source.indexOf(eol),insert=insertBlock(source,at,'');source=source.slice(0,at)+insert.insert+source.slice(at);
+      source=source.slice(0,insert.anchor)+'测试'+source.slice(insert.anchor);
+      const edit=deleteBlockEdit(source,insert.anchor,insert.anchor+2);source=source.slice(0,edit.from)+edit.insert+source.slice(edit.to);
+      assert.equal(source,original);
+    }
+  }
+  for(const source of ['first\n\nlast','first\n\nlast\n\n']){const edit=deleteBlockEdit(source,0,5);assert.equal(source.slice(0,edit.from)+edit.insert+source.slice(edit.to),source.slice(7));}
+});
+test('shared parsing is reused and generating a TOC does not mutate cached syntax',()=>{
+  const source='## Title\n\ntext';const raw=parseAuthoring(source),before=JSON.stringify(raw);assert.equal(authoringTree(source),raw);makeToc(source);assert.equal(parseAuthoring(source),raw);assert.equal(JSON.stringify(raw),before);
+});
 import {renderDocument} from '../src/shared/render';
 
 test('managed TOC shares renderer heading identifiers and ignores nested/code/excluded headings',()=>{

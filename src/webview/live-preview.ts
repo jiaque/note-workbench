@@ -1,18 +1,14 @@
 import { StateEffect, StateField, type EditorState, type Range } from '@codemirror/state';
-import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import remarkFrontmatter from 'remark-frontmatter';
-import { obsidianSyntax, maskComments } from '../shared/obsidian';
+import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet } from '@codemirror/view';
+import { maskComments } from '../shared/obsidian';
 import type { Block } from '../shared/render';
+import {parseAuthoring} from '../shared/authoring';
 
-const parser = unified().use(remarkParse).use(remarkGfm).use(remarkMath).use(remarkFrontmatter, ['yaml']).use(obsidianSyntax);
 export const renderedBlocks = StateEffect.define<Block[]>();
 export const previewMode = StateEffect.define<boolean>();
 export const previewFocus = StateEffect.define<boolean>();
-export const liveParser = (source: string): any => parser.parse(source);
+const refreshSyntax=StateEffect.define<null>();
+export const liveParser = parseAuthoring;
 
 export function livePreview(createBlock: (block: Block, view: EditorView) => HTMLElement, inlineOnly=false) {
   const dirtyTables = new Set<number>();
@@ -74,6 +70,7 @@ export function livePreview(createBlock: (block: Block, view: EditorView) => HTM
   const field = StateField.define<Model>({
     create(state) { return { blocks: [], enabled: true, focused: false, decorations: Decoration.none }; },
     update(value, tr) {
+      if(!tr.docChanged&&!tr.selection&&!tr.effects.some(e=>e.is(renderedBlocks)||e.is(previewMode)||e.is(previewFocus)||e.is(refreshSyntax)))return value;
       let { blocks, enabled, focused } = value;
       if (tr.docChanged) blocks = blocks.map(block => ({ ...block, from: tr.changes.mapPos(block.from, -1), to: tr.changes.mapPos(block.to, 1), html:block.html.replace(/data-task-offset="(\d+)"/g,(_,offset)=>`data-task-offset="${tr.changes.mapPos(Number(offset))}"`) }));
       for (const effect of tr.effects) {
@@ -81,7 +78,8 @@ export function livePreview(createBlock: (block: Block, view: EditorView) => HTM
         if (effect.is(previewMode)) enabled = effect.value;
         if (effect.is(previewFocus)) focused = effect.value;
       }
-      return { blocks, enabled, focused, decorations: enabled ? decorate(tr.state, blocks, focused) : Decoration.none };
+      const typing=tr.docChanged&&!tr.effects.some(e=>e.is(renderedBlocks)||e.is(previewMode)||e.is(previewFocus));
+      return { blocks, enabled, focused, decorations: enabled ? typing?value.decorations.map(tr.changes):decorate(tr.state, blocks, focused) : Decoration.none };
     },
     provide: field => EditorView.decorations.from(field, value => value.decorations),
   });
@@ -188,7 +186,13 @@ export function livePreview(createBlock: (block: Block, view: EditorView) => HTM
     for (const block of blocks.filter(b => b.kind === 'footnotes')) ranges.push(Decoration.widget({ block: true, side: 1, widget: new RenderWidget(block) }).range(state.doc.length));
     return Decoration.set(ranges, true);
   }
-  return [field, EditorView.domEventHandlers({
+  const refresh=ViewPlugin.fromClass(class {
+    timer?:ReturnType<typeof setTimeout>;
+    constructor(readonly view:EditorView){}
+    update(update:{docChanged:boolean}){if(update.docChanged){clearTimeout(this.timer);this.timer=setTimeout(()=>this.view.dispatch({effects:refreshSyntax.of(null)}),80);}}
+    destroy(){clearTimeout(this.timer);}
+  });
+  return [field, refresh, EditorView.domEventHandlers({
     focus: (event, view) => { if(event.target===view.contentDOM) view.dispatch({ effects: previewFocus.of(true) }); },
     blur: (event, view) => { if(event.target===view.contentDOM && !view.composing) view.dispatch({ effects: previewFocus.of(false) }); },
   })];

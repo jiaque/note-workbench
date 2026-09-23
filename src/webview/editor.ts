@@ -478,7 +478,8 @@ function render() {
             sync.local = update.state.doc.toString(); remember(); schedule();
             clearTimeout(tocTimer);if(autoToc)tocTimer=setTimeout(()=>{if(editor&&!sync.conflict)updateTocs(editor);},900);
           }
-          if(update.docChanged||update.selectionSet||update.focusChanged)floatingPreview.update(update.view,mode==='edit'&&!sourceMode);
+          if(update.docChanged)floatingPreview.queueUpdate(update.view,mode==='edit'&&!sourceMode);
+          else if(update.selectionSet||update.focusChanged)floatingPreview.update(update.view,mode==='edit'&&!sourceMode);
           if(update.docChanged){noteFind.changed();blockDelete.changed();}
         }),
         EditorView.domEventHandlers({

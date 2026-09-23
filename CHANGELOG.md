@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Remove adjacent blank separators when deleting blocks so repeated insert/delete cycles do not expand spacing. Allow excess blank gaps to be deleted, and reuse Markdown syntax trees across live preview and formatting controls to reduce typing work.
+
 - Show the floating preview immediately after inserting an empty paragraph. Add a hover-only block delete button, a pale red outline only when hovering that button, and undo support.
 
 - Keep block previews and source selections active when opening formatting menus; restore selections across host undo/redo so formatting can continue immediately. Use chain-link and highlighted-A toolbar icons.

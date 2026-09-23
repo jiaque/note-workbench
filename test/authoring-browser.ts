@@ -56,5 +56,10 @@ try{
   enabled=false;live.contentDOM.dispatchEvent(new PointerEvent('pointermove',{clientX:rect.left,clientY:rect.top,bubbles:true}));await wait();check(minus.hidden,'disabled mode hides delete');
   const complex='---\na: b\n---\n\n# Heading\n\n> [!note]\n> body\n>\n> | A |\n> |---|\n> | B |\n\n'+makeToc('## Chapter')+'\n\n## Chapter';
   const ranges=deletableBlocks(complex).map(b=>complex.slice(b.from,b.to));check(ranges.length===4,'top-level targets exclude frontmatter and merge TOC');check(ranges[1].includes('| B |'),'whole callout includes table');check(ranges[2].includes('nw:toc'),'TOC target includes markers');
-  output.textContent='PASS: formatting, preview, insertion, empty paragraph preview, delete hover states, whole-block boundaries, disabled mode, TOC';
+  const blanks='before\n\n\n\n\nafter';check(deletableBlocks(blanks).some(b=>!blanks.slice(b.from,b.to).trim()),'extra blank gap is deletable');
+  const large=Array.from({length:150},(_,i)=>`## Section ${i}\n\nParagraph with **bold** text and [a link](https://example.com).\n\n`).join('');
+  live.dispatch({changes:{from:0,to:live.state.doc.length,insert:large},selection:{anchor:large.length}});await wait(150);
+  const durations:number[]=[];for(let i=0;i<20;i++){const start=performance.now();live.dispatch({changes:{from:live.state.doc.length,insert:'字'},selection:{anchor:live.state.doc.length+1}});durations.push(performance.now()-start);}
+  await wait(180);check(live.state.doc.toString().endsWith('字'.repeat(20)),'rapid typing retains every character');
+  output.textContent='PASS: formatting, preview, insertion, blank gaps, delete/undo, TOC, rapid typing; max synchronous input '+Math.max(...durations).toFixed(1)+' ms';
 }catch(e){output.textContent='FAIL: '+String(e);console.error(e);}

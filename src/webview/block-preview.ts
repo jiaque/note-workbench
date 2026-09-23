@@ -17,6 +17,7 @@ export class BlockPreview {
   private body=document.createElement('div');
   private label=document.createElement('span');
   private timer?:ReturnType<typeof setTimeout>;
+  private inputTimer?:ReturnType<typeof setTimeout>;
   private requestId=0;
   private key='';
   private dismissed='';
@@ -42,9 +43,11 @@ export class BlockPreview {
     window.addEventListener('resize',()=>this.schedulePosition());window.addEventListener('scroll',()=>this.schedulePosition(),true);
     document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!this.box.hidden){this.dismissed=this.key;this.hide();}});
   }
-  hide(){clearTimeout(this.timer);cancelAnimationFrame(this.positionFrame);this.positionFrame=0;this.requestId++;this.box.hidden=true;}
+  hide(){clearTimeout(this.inputTimer);clearTimeout(this.timer);cancelAnimationFrame(this.positionFrame);this.positionFrame=0;this.requestId++;this.box.hidden=true;}
+  queueUpdate(view:EditorView,editing:boolean){clearTimeout(this.inputTimer);clearTimeout(this.timer);this.requestId++;this.inputTimer=setTimeout(()=>this.update(view,editing),90);}
   activate(view:EditorView){this.dismissed='';this.update(view,true);}
   update(view:EditorView|undefined,editing:boolean) {
+    clearTimeout(this.inputTimer);
     if(this.view!==view){if(this.view)this.sizeObserver.unobserve(this.view.dom);if(view)this.sizeObserver.observe(view.dom);}
     this.view=view;
     if(!this.enabled || !view || !editing || (!view.hasFocus&&!this.toolbar.dom.contains(document.activeElement))){this.hide();this.key='';return;}

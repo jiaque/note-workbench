@@ -6,7 +6,10 @@ import remarkMath from 'remark-math';
 import {transformObsidian,obsidianSyntax,maskComments} from './obsidian';
 
 const parser=unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter,['yaml']).use(remarkMath).use(obsidianSyntax);
-export function authoringTree(source:string):any {const tree=parser.parse(source);return parser.parse(maskComments(source,tree));}
+const parsed=new Map<string,any>();
+// Shared read-only trees: cursor movement and toolbar updates reuse the same parse.
+export function parseAuthoring(source:string):any {if(parsed.has(source))return parsed.get(source);const tree=parser.parse(source);parsed.set(source,tree);if(parsed.size>4)parsed.delete(parsed.keys().next().value!);return tree;}
+export function authoringTree(source:string):any {const tree=parseAuthoring(source);return parseAuthoring(maskComments(source,tree));}
 export interface TocOptions {min:number;max:number;auto:boolean}
 export const defaultToc:TocOptions={min:2,max:3,auto:true};
 export function managedTocs(source:string){
@@ -20,7 +23,7 @@ export function managedTocs(source:string){
   }return results;
 }
 export function makeToc(source:string,options:TocOptions=defaultToc){
-  const root=authoringTree(source);transformObsidian(root,source);
+  const root=structuredClone(authoringTree(source));transformObsidian(root,source);
   const headings=root.children.filter((n:any)=>n.type==='heading'&&n.depth>=options.min&&n.depth<=options.max&&!/<!--\s*nw:toc-ignore\s*-->/.test(source.slice(n.position.start.offset,n.position.end.offset)));
   const lines=headings.map((n:any)=>{const id=String(n.data.hProperties.id),label=String(n.data.hProperties.dataHeading).replace(/[\\\[\]]/g,'\\$&');return '  '.repeat(n.depth-options.min)+`- [${label}](#${encodeURIComponent(id)})`;});
   return `<!-- nw:toc ${JSON.stringify(options)} -->\n\n${lines.join('\n')}\n\n<!-- /nw:toc -->`;
@@ -34,6 +37,15 @@ export function insertBlock(source:string,at:number,body:string){
   // An empty paragraph needs a physical editable line even at the document ends.
   const insert=before+body+(body?after:'\n'+after);
   return {from:at,to:at,insert,anchor:at+before.length};
+}
+export function deleteBlockEdit(source:string,from:number,to:number){
+  // Remove this block's surrounding blank separators, keeping one Markdown gap.
+  // Never normalize whitespace elsewhere or trailing spaces on adjacent content.
+  const left=/((?:\r?\n[\t ]*)+)$/.exec(source.slice(0,from));
+  const right=/^(?:[\t ]*\r?\n)+/.exec(source.slice(to));
+  const start=from-(left?.[0].length??0),end=to+(right?.[0].length??0);
+  const eol=source.includes('\r\n')?'\r\n':'\n';
+  return {from:start,to:end,insert:start>0&&end<source.length?eol+eol:''};
 }
 export function pastedLink(source:string,from:number,to:number,url:string){
   if(from===to||!/^https?:\/\/[^\s<>]+$/i.test(url))return;
