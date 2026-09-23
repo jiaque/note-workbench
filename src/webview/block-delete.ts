@@ -27,7 +27,9 @@ export class BlockDelete {
       const top=rendered.length?Math.min(...rendered.map(w=>w.rect.top)):a.top,bottom=rendered.length?Math.max(...rendered.map(w=>w.rect.bottom)):Math.max(a.bottom,b.bottom);if(y<top||y>bottom)continue;
       this.selected={view,source,...block};this.button.hidden=false;this.outline.hidden=this.tip.hidden=true;
       const tableCard=[...view.dom.querySelectorAll<HTMLElement>('.table-card')].find(el=>Number(el.dataset.sourceFrom)>=block.from&&Number(el.dataset.sourceFrom)<block.to);
-      const left=Math.min(area.right+5,innerWidth-27),center=Math.max(14,Math.min(innerHeight-14,tableCard?tableCard.getBoundingClientRect().top+12:(Math.max(0,top)+Math.min(innerHeight,bottom))/2));
+      const add=tableCard?.querySelector<HTMLElement>('.add-column')?.getBoundingClientRect();
+      // Keep the actual hit boxes separate; never clamp delete back over add.
+      const left=add?add.right+8:Math.min(area.right+5,innerWidth-27),center=add?(add.top+add.bottom)/2:Math.max(14,Math.min(innerHeight-14,(Math.max(0,top)+Math.min(innerHeight,bottom))/2));
       Object.assign(this.button.style,{left:left+'px',top:center-12+'px'});Object.assign(this.outline.style,{left:area.left+'px',top:top+'px',width:area.width+'px',height:bottom-top+'px'});Object.assign(this.tip.style,{right:Math.max(8,innerWidth-left-24)+'px',top:Math.max(4,center-43)+'px'});return;
     }this.hide();
   }
