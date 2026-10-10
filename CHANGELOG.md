@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.5 — 2026-10-10
+
+### Fixed
+
+- Fix Windows absolute image paths being stripped before resource resolution. Local media paths now reach the existing workspace-bound resolver, including file URLs.
+
 ## 0.6.4 — 2026-09-23
 
 ### Fixed

@@ -28,7 +28,7 @@ const createRenderer = (preview=false) => unified().use(remarkRehype, { allowDan
   .use(() => (tree: any) => filterStyles(tree))
   .use(rehypeSanitize, {
     ...defaultSchema,
-    protocols: { ...defaultSchema.protocols, src:[...(defaultSchema.protocols?.src??[]),'data'], href: [...(defaultSchema.protocols?.href ?? []), 'file', 'nw-note', 'nw-tag', 'obsidian'] },
+    protocols: { ...defaultSchema.protocols, src:[...(defaultSchema.protocols?.src??[]),'data','file'], href: [...(defaultSchema.protocols?.href ?? []), 'file', 'nw-note', 'nw-tag', 'obsidian'] },
     tagNames: [...defaultSchema.tagNames!, 'colgroup', 'col', 'details', 'summary', 'mark', 'sub', 'sup', 'u', 'abbr', 'figure', 'figcaption', 'audio', 'video', 'source', 'svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'tspan', 'title', 'desc'],
     attributes: { ...defaultSchema.attributes,
       '*': [...(defaultSchema.attributes!['*'] ?? []), 'style', 'className', 'dataNwBlock', 'dataHeading', 'dataNoteTarget', 'dataEmbed', 'dataWidth', 'dataHeight', 'dataVaultImage', 'dataTaskOffset', 'dataTaskMark',...Object.keys(effectAttributes),'dataNwRepeat','dataNwSvgStatic','dataNwSvgTips'],
@@ -66,6 +66,8 @@ const allowedStyles = new Set(['color', 'background-color', 'background', 'paddi
 function filterStyles(node: any) {
   if (node.properties) {
     if (node.tagName === 'a' && /^[a-z]:[\\/]/i.test(String(node.properties.href ?? ''))) node.properties.href = 'file:///' + node.properties.href.replace(/\\/g, '/');
+    // Preserve local media until hydrateResources resolves it within the vault.
+    if (['img','audio','video','source'].includes(node.tagName) && /^[a-z]:[\\/]/i.test(String(node.properties.src ?? ''))) node.properties.src = 'file:///' + node.properties.src.replace(/\\/g, '/');
     const style = node.properties.style;
     if (typeof style === 'string') node.properties.style = cleanStyle(style);
     for(const [key,values] of Object.entries(effectAttributes))if(node.properties[key]!==undefined&&!values.includes(node.properties[key]))delete node.properties[key];
